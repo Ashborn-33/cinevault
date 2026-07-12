@@ -1,0 +1,5 @@
+export { Onboarding } from "./pages/Onboarding"
+export { ProfileProvider, ProfileContext } from "./providers/ProfileProvider"
+export { useProfile } from "./hooks/useProfile"
+export * from "./types/onboarding"
+export { ProfileService } from "./services/profile.service"

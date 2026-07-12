@@ -13,14 +13,6 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-const navItems: NavItem[] = [
-  { path: "/", label: "Home", icon: Home },
-  { path: "/discover", label: "Discover", icon: Compass },
-  { path: "/library", label: "Library", icon: Library },
-  { path: "/statistics", label: "Statistics", icon: BarChart3 },
-  { path: "/collections", label: "Collections", icon: Layers },
-]
-
 export function Navbar() {
   const { theme, setTheme } = useTheme()
   const { user, signOut } = useAuth()
@@ -63,6 +55,14 @@ export function Navbar() {
     return user.email.slice(0, 2).toUpperCase()
   }
 
+  const navItems: NavItem[] = [
+    { path: user ? "/dashboard" : "/", label: "Home", icon: Home },
+    { path: "/discover", label: "Discover", icon: Compass },
+    { path: "/library", label: "Library", icon: Library },
+    { path: "/statistics", label: "Statistics", icon: BarChart3 },
+    { path: "/collections", label: "Collections", icon: Layers },
+  ]
+
   return (
     <>
       {/* 1. Desktop Top Navigation Bar */}
@@ -77,7 +77,7 @@ export function Navbar() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Logo Wordmark */}
           <NavLink
-            to="/"
+            to={user ? "/dashboard" : "/"}
             className="font-heading text-xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
           >
             CineVault

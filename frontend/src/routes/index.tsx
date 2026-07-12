@@ -5,6 +5,8 @@ import { Home } from "@/pages/Home"
 import { DevShowcase } from "@/pages/DevShowcase"
 
 import { Login, SignUp, ForgotPassword, ResetPassword, ProtectedRoute } from "@/features/auth"
+import { Onboarding } from "@/features/onboarding"
+import { Dashboard } from "@/features/dashboard/pages/Dashboard"
 import { Discover } from "@/features/discover/pages/Discover"
 import { Library } from "@/features/library/pages/Library"
 import { Statistics } from "@/features/statistics/pages/Statistics"
@@ -49,6 +51,14 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute />,
         children: [
+          {
+            path: "onboarding",
+            element: <Onboarding />,
+          },
+          {
+            path: "dashboard",
+            element: <Dashboard />,
+          },
           {
             path: "discover",
             element: <Discover />,

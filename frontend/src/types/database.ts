@@ -1,34 +1,39 @@
 export type Database = {
   public: {
     Tables: {
-      // Stub mapping for future database tables
       profiles: {
         Row: {
           id: string
+          user_id: string
           username: string
-          display_name: string | null
           avatar_url: string | null
-          bio: string | null
-          is_public: boolean
+          preferred_content: string[] | null
+          favorite_genres: string[] | null
+          onboarding_completed: boolean
           created_at: string
+          updated_at: string
         }
         Insert: {
-          id: string
+          id?: string
+          user_id: string
           username: string
-          display_name?: string | null
           avatar_url?: string | null
-          bio?: string | null
-          is_public?: boolean
+          preferred_content?: string[] | null
+          favorite_genres?: string[] | null
+          onboarding_completed?: boolean
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
+          user_id?: string
           username?: string
-          display_name?: string | null
           avatar_url?: string | null
-          bio?: string | null
-          is_public?: boolean
+          preferred_content?: string[] | null
+          favorite_genres?: string[] | null
+          onboarding_completed?: boolean
           created_at?: string
+          updated_at?: string
         }
       }
     }
