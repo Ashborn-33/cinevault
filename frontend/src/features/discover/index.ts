@@ -1,0 +1,5 @@
+export { Discover } from "./pages/Discover"
+export * from "./types/discover"
+export { MediaService } from "./services/media.service"
+export * from "./hooks/useMedia"
+export { tmdbClient } from "./api/tmdb.client"
