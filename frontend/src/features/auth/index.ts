@@ -1,0 +1,8 @@
+export { useAuth } from "./hooks/useAuth"
+export { AuthProvider } from "./providers/AuthProvider"
+export { ProtectedRoute } from "./routes/ProtectedRoute"
+export { Login } from "./pages/Login"
+export { SignUp } from "./pages/SignUp"
+export { ForgotPassword } from "./pages/ForgotPassword"
+export { ResetPassword } from "./pages/ResetPassword"
+export * from "./types/auth"

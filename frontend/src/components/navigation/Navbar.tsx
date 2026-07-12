@@ -1,8 +1,10 @@
 import * as React from "react"
-import { NavLink, useLocation } from "react-router-dom"
+import { NavLink, useLocation, Link, useNavigate } from "react-router-dom"
 import { Home, Compass, Library, BarChart3, Layers, Search, Sun, Moon } from "lucide-react"
 
 import { useTheme } from "@/providers/ThemeProvider"
+import { useAuth } from "@/features/auth"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 interface NavItem {
@@ -21,8 +23,13 @@ const navItems: NavItem[] = [
 
 export function Navbar() {
   const { theme, setTheme } = useTheme()
+  const { user, signOut } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
+
   const [isScrolled, setIsScrolled] = React.useState(false)
+  const [menuOpen, setMenuOpen] = React.useState(false)
+  const menuRef = React.useRef<HTMLDivElement>(null)
 
   // Track window scroll for transparency transitions
   React.useEffect(() => {
@@ -33,8 +40,27 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Close profile menu clicking outside
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleOutsideClick)
+    return () => document.removeEventListener("mousedown", handleOutsideClick)
+  }, [])
+
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
+  }
+
+  const getInitials = () => {
+    if (!user) return ""
+    if (user.username) {
+      return user.username.slice(0, 2).toUpperCase()
+    }
+    return user.email.slice(0, 2).toUpperCase()
   }
 
   return (
@@ -128,16 +154,50 @@ export function Navbar() {
               </span>
             </button>
 
-            {/* Profile Menu Placeholder */}
-            <div
-              className="h-8 w-8 rounded-full border border-border bg-primary/10 text-primary flex items-center justify-center text-xs font-bold font-heading hover:border-primary cursor-pointer select-none transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              role="button"
-              tabIndex={0}
-              aria-label="User Profile"
-              onClick={() => alert("Profile menu placeholder clicked")}
-            >
-              CV
-            </div>
+            {/* Profile Dropdown or Auth buttons */}
+            {user ? (
+              <div className="relative" ref={menuRef}>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen(!menuOpen)}
+                  className="h-8 w-8 rounded-full border border-border bg-primary/10 text-primary flex items-center justify-center text-xs font-bold font-heading hover:border-primary cursor-pointer select-none transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-expanded={menuOpen}
+                  aria-haspopup="true"
+                  aria-label="User Profile"
+                >
+                  {getInitials()}
+                </button>
+
+                {menuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 rounded-card border border-border bg-surface p-2 shadow-level-2 animate-in fade-in slide-in-from-top-1 duration-instant z-popover">
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground truncate font-medium">
+                      {user.email}
+                    </div>
+                    <div className="my-1 border-t border-border/60"></div>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setMenuOpen(false)
+                        await signOut()
+                        navigate("/login")
+                      }}
+                      className="w-full text-left px-2 py-1.5 text-xs text-error hover:bg-error/5 rounded-button cursor-pointer transition-colors outline-none focus-visible:bg-error/10 font-bold"
+                    >
+                      Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/login">Login</Link>
+                </Button>
+                <Button size="sm" asChild>
+                  <Link to="/signup">Sign Up</Link>
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </header>
