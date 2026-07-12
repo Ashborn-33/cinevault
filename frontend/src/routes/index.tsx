@@ -1,6 +1,7 @@
 import { createBrowserRouter } from "react-router-dom"
 import { RootLayout } from "@/layouts/RootLayout"
 import { Home } from "@/pages/Home"
+import { DevShowcase } from "@/pages/DevShowcase"
 
 export const router = createBrowserRouter([
   {
@@ -10,6 +11,10 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <Home />,
+      },
+      {
+        path: "dev/showcase",
+        element: <DevShowcase />,
       },
     ],
   },

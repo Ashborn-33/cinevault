@@ -1,17 +1,25 @@
-import { Outlet } from "react-router-dom"
+import { Outlet, useLocation } from "react-router-dom"
+import { Navbar } from "@/components/navigation/Navbar"
 
 export function RootLayout() {
+  const location = useLocation()
+  const isDevShowcase = location.pathname.startsWith("/dev/")
+
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased transition-colors duration-300">
-      {/* Header Placeholder */}
-      <header className="sticky top-0 z-sticky border-b border-border bg-surface/50 backdrop-blur-md">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-r from-primary to-accent bg-clip-text text-xl font-bold tracking-tight text-transparent">
-            CineVault
+    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased transition-colors duration-300 pb-14 md:pb-0">
+      {/* Conditionally render public Navbar vs Dev Header */}
+      {!isDevShowcase ? (
+        <Navbar />
+      ) : (
+        <header className="sticky top-0 z-sticky border-b border-border bg-surface/50 backdrop-blur-md">
+          <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+            <div className="bg-gradient-to-r from-primary to-accent bg-clip-text text-xl font-bold tracking-tight text-transparent">
+              CineVault
+            </div>
+            <nav className="text-sm text-muted-foreground">Header Navigation Placeholder</nav>
           </div>
-          <nav className="text-sm text-muted-foreground">Header Navigation Placeholder</nav>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-grow">
