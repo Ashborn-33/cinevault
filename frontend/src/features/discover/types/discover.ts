@@ -45,18 +45,4 @@ export interface TMDBMediaItem {
   overview: string
 }
 
-export interface MovieDetails extends TMDBMovie {
-  genres: Genre[]
-  runtime: number | null
-  status: string
-  tagline: string | null
-}
-
-export interface TVDetails extends TMDBTVShow {
-  genres: Genre[]
-  episode_run_time: number[]
-  status: string
-  tagline: string | null
-  number_of_episodes: number
-  number_of_seasons: number
-}
+export type { MovieDetails, TVDetails } from "@/features/media/types/media"

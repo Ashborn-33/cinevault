@@ -6,6 +6,7 @@ import { DevShowcase } from "@/pages/DevShowcase"
 
 import { Login, SignUp, ForgotPassword, ResetPassword, ProtectedRoute } from "@/features/auth"
 import { Onboarding } from "@/features/onboarding"
+import { MediaDetails } from "@/features/media"
 import { Dashboard } from "@/features/dashboard/pages/Dashboard"
 import { Discover } from "@/features/discover"
 import { Library } from "@/features/library/pages/Library"
@@ -62,6 +63,14 @@ export const router = createBrowserRouter([
           {
             path: "discover",
             element: <Discover />,
+          },
+          {
+            path: "movie/:id",
+            element: <MediaDetails type="movie" />,
+          },
+          {
+            path: "tv/:id",
+            element: <MediaDetails type="tv" />,
           },
           {
             path: "library",

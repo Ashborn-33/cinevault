@@ -1,14 +1,14 @@
 import { tmdbClient } from "../api/tmdb.client"
 import { TMDB_ENDPOINTS } from "@/config/api"
 import type { MediaItem, MediaType } from "@/components/ui/media-card"
+import type { Genre, TMDBMovie, TMDBTVShow, TMDBMediaItem } from "../types/discover"
 import type {
   MovieDetails,
   TVDetails,
-  Genre,
-  TMDBMovie,
-  TMDBTVShow,
-  TMDBMediaItem,
-} from "../types/discover"
+  CreditsResult,
+  VideosResult,
+  ImagesResult,
+} from "@/features/media/types/media"
 
 let genreMapCache: Record<number, string> | null = null
 
@@ -141,6 +141,60 @@ export const MediaService = {
 
   async getTVDetails(id: string | number): Promise<TVDetails> {
     return tmdbClient.request<TVDetails>(TMDB_ENDPOINTS.TV_DETAILS(id))
+  },
+
+  async getMovieCredits(id: string | number): Promise<CreditsResult> {
+    return tmdbClient.request<CreditsResult>(TMDB_ENDPOINTS.MOVIE_CREDITS(id))
+  },
+
+  async getTVCredits(id: string | number): Promise<CreditsResult> {
+    return tmdbClient.request<CreditsResult>(TMDB_ENDPOINTS.TV_CREDITS(id))
+  },
+
+  async getMovieVideos(id: string | number): Promise<VideosResult> {
+    return tmdbClient.request<VideosResult>(TMDB_ENDPOINTS.MOVIE_VIDEOS(id))
+  },
+
+  async getTVVideos(id: string | number): Promise<VideosResult> {
+    return tmdbClient.request<VideosResult>(TMDB_ENDPOINTS.TV_VIDEOS(id))
+  },
+
+  async getMovieRecommendations(
+    id: string | number,
+    page = 1
+  ): Promise<{ results: MediaItem[]; totalPages: number }> {
+    const genresMap = await fetchGenreMap()
+    const res = await tmdbClient.request<{ results: TMDBMovie[]; total_pages: number }>(
+      TMDB_ENDPOINTS.MOVIE_RECOMMENDATIONS(id),
+      { page }
+    )
+    return {
+      results: res.results.map((item) => mapTMDBMovie(item, genresMap)),
+      totalPages: res.total_pages,
+    }
+  },
+
+  async getTVRecommendations(
+    id: string | number,
+    page = 1
+  ): Promise<{ results: MediaItem[]; totalPages: number }> {
+    const genresMap = await fetchGenreMap()
+    const res = await tmdbClient.request<{ results: TMDBTVShow[]; total_pages: number }>(
+      TMDB_ENDPOINTS.TV_RECOMMENDATIONS(id),
+      { page }
+    )
+    return {
+      results: res.results.map((item) => mapTMDBTVShow(item, genresMap)),
+      totalPages: res.total_pages,
+    }
+  },
+
+  async getMovieImages(id: string | number): Promise<ImagesResult> {
+    return tmdbClient.request<ImagesResult>(TMDB_ENDPOINTS.MOVIE_IMAGES(id))
+  },
+
+  async getTVImages(id: string | number): Promise<ImagesResult> {
+    return tmdbClient.request<ImagesResult>(TMDB_ENDPOINTS.TV_IMAGES(id))
   },
 
   async getUpcoming(page = 1): Promise<{ results: MediaItem[]; totalPages: number }> {

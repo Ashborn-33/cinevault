@@ -11,4 +11,12 @@ export const TMDB_ENDPOINTS = {
   NOW_PLAYING: "/movie/now_playing",
   TOP_RATED_MOVIES: "/movie/top_rated",
   TOP_RATED_TV: "/tv/top_rated",
+  MOVIE_CREDITS: (id: string | number) => `/movie/${id}/credits`,
+  TV_CREDITS: (id: string | number) => `/tv/${id}/credits`,
+  MOVIE_VIDEOS: (id: string | number) => `/movie/${id}/videos`,
+  TV_VIDEOS: (id: string | number) => `/tv/${id}/videos`,
+  MOVIE_RECOMMENDATIONS: (id: string | number) => `/movie/${id}/recommendations`,
+  TV_RECOMMENDATIONS: (id: string | number) => `/tv/${id}/recommendations`,
+  MOVIE_IMAGES: (id: string | number) => `/movie/${id}/images`,
+  TV_IMAGES: (id: string | number) => `/tv/${id}/images`,
 } as const

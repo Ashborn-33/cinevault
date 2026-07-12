@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { Search, AlertCircle, RefreshCw, X, Film, Tv } from "lucide-react"
+import { useNavigate } from "react-router-dom"
 
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -16,6 +17,7 @@ import {
 } from "../hooks/useMedia"
 
 export function Discover() {
+  const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedQuery, setDebouncedQuery] = useState("")
 
@@ -70,7 +72,11 @@ export function Discover() {
     }
   }
 
-  // Render Skeletons lists
+  const handleCardClick = (type: string, compoundId: string) => {
+    const numericId = compoundId.split("-")[1]
+    navigate(`/${type}/${numericId}`)
+  }
+
   const renderSkeletons = (count = 6) => (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
       {Array.from({ length: count }).map((_, idx) => (
@@ -129,7 +135,10 @@ export function Discover() {
           </div>
 
           {isSearchError && (
-            <div className="flex flex-col items-center justify-center p-12 border border-error/20 bg-error/5 rounded-card text-center space-y-4 animate-in fade-in">
+            <div
+              className="flex flex-col items-center justify-center p-12 border border-error/20 bg-error/5 rounded-card text-center space-y-4 animate-in fade-in animate-out duration-medium"
+              role="alert"
+            >
               <AlertCircle className="h-10 w-10 text-error" />
               <div className="space-y-1">
                 <p className="text-sm font-bold">Couldn't load search results.</p>
@@ -166,7 +175,11 @@ export function Discover() {
           {!isSearchError && !isSearchLoading && searchData && searchData.results.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 animate-in fade-in duration-medium">
               {searchData.results.map((item) => (
-                <MediaCard key={item.id} item={item} />
+                <MediaCard
+                  key={item.id}
+                  item={item}
+                  onClick={() => handleCardClick(item.type, item.id)}
+                />
               ))}
             </div>
           )}
@@ -227,7 +240,11 @@ export function Discover() {
             {!isTrendingLoading && !isTrendingError && trendingData && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 animate-in fade-in duration-medium">
                 {trendingData.results.slice(0, 6).map((item) => (
-                  <MediaCard key={item.id} item={item} />
+                  <MediaCard
+                    key={item.id}
+                    item={item}
+                    onClick={() => handleCardClick(item.type, item.id)}
+                  />
                 ))}
               </div>
             )}
@@ -265,7 +282,11 @@ export function Discover() {
             {!isMoviesLoading && !isMoviesError && moviesData && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 animate-in fade-in duration-medium">
                 {moviesData.results.slice(0, 6).map((item) => (
-                  <MediaCard key={item.id} item={item} />
+                  <MediaCard
+                    key={item.id}
+                    item={item}
+                    onClick={() => handleCardClick(item.type, item.id)}
+                  />
                 ))}
               </div>
             )}
@@ -305,7 +326,11 @@ export function Discover() {
             {!isTVLoading && !isTVError && tvData && (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6 animate-in fade-in duration-medium">
                 {tvData.results.slice(0, 6).map((item) => (
-                  <MediaCard key={item.id} item={item} />
+                  <MediaCard
+                    key={item.id}
+                    item={item}
+                    onClick={() => handleCardClick(item.type, item.id)}
+                  />
                 ))}
               </div>
             )}
