@@ -7,9 +7,10 @@ import { DevShowcase } from "@/pages/DevShowcase"
 import { Login, SignUp, ForgotPassword, ResetPassword, ProtectedRoute } from "@/features/auth"
 import { Onboarding } from "@/features/onboarding"
 import { MediaDetails } from "@/features/media"
+import { WatchHistory } from "@/features/tracking"
 import { Dashboard } from "@/features/dashboard/pages/Dashboard"
 import { Discover } from "@/features/discover"
-import { Library } from "@/features/library/pages/Library"
+import { Library } from "@/features/library"
 import { Statistics } from "@/features/statistics/pages/Statistics"
 import { Collections } from "@/features/collections/pages/Collections"
 
@@ -75,6 +76,10 @@ export const router = createBrowserRouter([
           {
             path: "library",
             element: <Library />,
+          },
+          {
+            path: "history",
+            element: <WatchHistory />,
           },
           {
             path: "statistics",

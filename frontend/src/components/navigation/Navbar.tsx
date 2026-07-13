@@ -174,6 +174,13 @@ export function Navbar() {
                       {user.email}
                     </div>
                     <div className="my-1 border-t border-border/60"></div>
+                    <NavLink
+                      to="/history"
+                      onClick={() => setMenuOpen(false)}
+                      className="w-full block text-left px-2 py-1.5 text-xs text-muted-foreground hover:bg-surface-hover hover:text-foreground rounded-button transition-colors outline-none font-bold mb-1"
+                    >
+                      Watch History
+                    </NavLink>
                     <button
                       type="button"
                       onClick={async () => {

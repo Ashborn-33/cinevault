@@ -19,4 +19,11 @@ export const queryKeys = {
   statistics: {
     user: (userId: string) => ["statistics", "user", userId] as const,
   },
+  tracking: {
+    watchHistory: (userId: string, page?: number, limit?: number) =>
+      ["tracking", "watchHistory", userId, page, limit].filter(
+        Boolean
+      ) as unknown as readonly unknown[],
+    continueWatching: (userId: string) => ["tracking", "continueWatching", userId] as const,
+  },
 } as const

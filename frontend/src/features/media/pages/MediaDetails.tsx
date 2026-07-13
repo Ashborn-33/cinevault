@@ -1,3 +1,4 @@
+import * as React from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import {
   Star,
@@ -18,6 +19,21 @@ import { MediaCard } from "@/components/ui/media-card"
 import { Badge } from "@/components/ui/badge"
 import { LoadingSpinner } from "@/components/ui/loading"
 import { tmdbClient } from "@/features/discover"
+import {
+  useLibraryItem,
+  useAddToLibrary,
+  useRemoveFromLibrary,
+  useToggleFavorite,
+  useToggleWatchlist,
+  useUpdateStatus,
+} from "@/features/library"
+import {
+  TrackingService,
+  ProgressModal,
+  useStartWatching,
+  useProgress,
+  useRewatchMovie,
+} from "@/features/tracking"
 
 import {
   useMovieDetails,
@@ -41,9 +57,11 @@ export function MediaDetails({ type }: MediaDetailsProps) {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const mediaId = id || ""
-
   const isMovie = type === "movie"
 
+  const [isProgressModalOpen, setIsProgressModalOpen] = React.useState(false)
+
+  // TMDB Queries
   const movieDetails = useMovieDetails(mediaId)
   const tvDetails = useTVDetails(mediaId)
   const movieCredits = useMovieCredits(mediaId)
@@ -54,6 +72,30 @@ export function MediaDetails({ type }: MediaDetailsProps) {
   const tvRecommendations = useTVRecommendations(mediaId)
   const movieImages = useMovieImages(mediaId)
   const tvImages = useTVImages(mediaId)
+
+  // Library Queries & Mutations
+  const { data: libraryItem, refetch: refetchLibraryItem } = useLibraryItem(mediaId, type)
+  const addToLibraryMutation = useAddToLibrary()
+  const removeFromLibraryMutation = useRemoveFromLibrary()
+  const toggleFavoriteMutation = useToggleFavorite()
+  const toggleWatchlistMutation = useToggleWatchlist()
+  const updateStatusMutation = useUpdateStatus()
+
+  // Watch Tracking Mutations
+  const startWatchingMutation = useStartWatching()
+  const progressMutation = useProgress()
+  const rewatchMutation = useRewatchMovie()
+
+  const inLibrary = !!libraryItem
+  const status = libraryItem?.status || "planning"
+  const favorite = libraryItem?.favorite || false
+  const watchlist = libraryItem?.watchlist || false
+
+  // Tracking Helpers
+  const canStart = isMovie && TrackingService.canStartWatching(libraryItem || null)
+  const canContinue = isMovie && TrackingService.canContinueWatching(libraryItem || null)
+  const canRewatch = isMovie && TrackingService.canRewatch(libraryItem || null)
+  const progressPercent = isMovie ? TrackingService.getProgressPercentage(libraryItem || null) : 0
 
   const detailsQuery = isMovie ? movieDetails : tvDetails
   const creditsQuery = isMovie ? movieCredits : tvCredits
@@ -70,6 +112,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
     videosQuery.refetch()
     recommendationsQuery.refetch()
     imagesQuery.refetch()
+    refetchLibraryItem()
   }
 
   if (isLoading) {
@@ -149,13 +192,103 @@ export function MediaDetails({ type }: MediaDetailsProps) {
         .slice(0, 4)
     : []
 
-  const handleActionPlaceholder = (action: string) => {
-    alert(`${action} is a placeholder and will be completed in Sprint: Library Features (CV-031).`)
-  }
-
   const handleShare = () => {
     navigator.clipboard.writeText(window.location.href)
     alert("Media details link copied to clipboard!")
+  }
+
+  const handleAddToLibrary = async () => {
+    try {
+      if (inLibrary) {
+        await removeFromLibraryMutation.mutateAsync({ mediaId, mediaType: type })
+      } else {
+        await addToLibraryMutation.mutateAsync({
+          media_id: mediaId,
+          media_type: type,
+          title,
+          poster_path: details.poster_path,
+          backdrop_path: details.backdrop_path,
+          overview: details.overview,
+          release_date: dateStr,
+          genres: details.genres?.map((g) => g.name) || [],
+          status: "planning",
+        })
+      }
+    } catch (err) {
+      console.error("Failed to alter library membership", err)
+    }
+  }
+
+  const handleToggleFavorite = async () => {
+    try {
+      if (inLibrary) {
+        await toggleFavoriteMutation.mutateAsync({ mediaId, mediaType: type, favorite: !favorite })
+      } else {
+        await addToLibraryMutation.mutateAsync({
+          media_id: mediaId,
+          media_type: type,
+          title,
+          poster_path: details.poster_path,
+          backdrop_path: details.backdrop_path,
+          overview: details.overview,
+          release_date: dateStr,
+          genres: details.genres?.map((g) => g.name) || [],
+          favorite: true,
+        })
+      }
+    } catch (err) {
+      console.error("Failed to toggle favorite", err)
+    }
+  }
+
+  const handleToggleWatchlist = async () => {
+    try {
+      if (inLibrary) {
+        await toggleWatchlistMutation.mutateAsync({
+          mediaId,
+          mediaType: type,
+          watchlist: !watchlist,
+        })
+      } else {
+        await addToLibraryMutation.mutateAsync({
+          media_id: mediaId,
+          media_type: type,
+          title,
+          poster_path: details.poster_path,
+          backdrop_path: details.backdrop_path,
+          overview: details.overview,
+          release_date: dateStr,
+          genres: details.genres?.map((g) => g.name) || [],
+          watchlist: true,
+        })
+      }
+    } catch (err) {
+      console.error("Failed to toggle watchlist", err)
+    }
+  }
+
+  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    try {
+      await updateStatusMutation.mutateAsync({
+        mediaId,
+        mediaType: type,
+        status: e.target.value as import("@/features/library").LibraryStatus,
+      })
+    } catch (err) {
+      console.error("Failed to update status", err)
+    }
+  }
+
+  const handleSaveProgress = async (newProgress: number) => {
+    try {
+      await progressMutation.mutateAsync({
+        mediaId: Number(mediaId),
+        progress: newProgress,
+        expectedUpdatedAt: libraryItem?.updated_at || null,
+      })
+    } catch (err) {
+      console.error("Progress update mutation failed", err)
+    }
   }
 
   return (
@@ -242,33 +375,130 @@ export function MediaDetails({ type }: MediaDetailsProps) {
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 pt-2">
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5 pt-2">
+              {/* Play / Progress tracking primary button (Movie only) */}
+              {isMovie && (
+                <>
+                  {canStart && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 border-none text-white font-bold"
+                      onClick={() =>
+                        startWatchingMutation.mutate({
+                          mediaId: Number(mediaId),
+                          title,
+                          posterPath: details.poster_path,
+                          backdropPath: details.backdrop_path,
+                          overview: details.overview,
+                          releaseDate: dateStr,
+                          genres: details.genres?.map((g) => g.name) || [],
+                          runtimeMinutes: (details as MovieDetails).runtime || 0,
+                        })
+                      }
+                      loading={startWatchingMutation.isPending}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Start Watching
+                    </Button>
+                  )}
+
+                  {canContinue && (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="primary"
+                        className="flex items-center gap-1.5 font-bold"
+                        onClick={() => setIsProgressModalOpen(true)}
+                        loading={progressMutation.isPending}
+                      >
+                        Update Progress
+                      </Button>
+                      <Badge
+                        variant="outline"
+                        className="text-primary border-primary/30 font-sans font-bold"
+                      >
+                        {progressPercent}% Complete
+                      </Badge>
+                    </div>
+                  )}
+
+                  {canRewatch && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      className="flex items-center gap-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 border-none text-white font-bold"
+                      onClick={() => rewatchMutation.mutate({ mediaId: Number(mediaId) })}
+                      loading={rewatchMutation.isPending}
+                    >
+                      Rewatch Movie
+                    </Button>
+                  )}
+                </>
+              )}
+
+              {/* Standard Library CRUD Controls */}
               <Button
                 size="sm"
+                variant={inLibrary ? "destructive" : "primary"}
                 className="flex items-center gap-1.5"
-                onClick={() => handleActionPlaceholder("Add to Library")}
+                onClick={handleAddToLibrary}
+                loading={addToLibraryMutation.isPending || removeFromLibraryMutation.isPending}
               >
-                <Plus className="h-4 w-4" />
-                Add to Library
+                {inLibrary ? (
+                  <>Remove from Library</>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4" />
+                    Add to Library
+                  </>
+                )}
               </Button>
+
+              {inLibrary && (!isMovie || !canContinue) && (
+                <div className="relative">
+                  <select
+                    value={status}
+                    onChange={handleStatusChange}
+                    className="h-9 rounded-button border border-border bg-surface px-3 py-1 text-xs font-semibold select-none outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                    aria-label="Change watch status"
+                    disabled={updateStatusMutation.isPending}
+                  >
+                    <option value="planning">Planning</option>
+                    <option value="watching">Watching</option>
+                    <option value="completed">Completed</option>
+                    <option value="on_hold">On Hold</option>
+                    <option value="dropped">Dropped</option>
+                    <option value="rewatching">Rewatching</option>
+                  </select>
+                </div>
+              )}
+
               <Button
-                variant="secondary"
+                variant={favorite ? "primary" : "secondary"}
                 size="sm"
-                className="flex items-center gap-1.5"
-                onClick={() => handleActionPlaceholder("Favorite")}
+                className={`flex items-center gap-1.5 ${favorite ? "bg-rose-600 hover:bg-rose-700 text-white" : ""}`}
+                onClick={handleToggleFavorite}
+                loading={toggleFavoriteMutation.isPending}
+                aria-label={favorite ? "Remove from Favorites" : "Add to Favorites"}
               >
-                <Heart className="h-4 w-4" />
-                Favorite
+                <Heart className={`h-4 w-4 ${favorite ? "fill-current" : ""}`} />
+                {favorite ? "Favorited" : "Favorite"}
               </Button>
+
               <Button
-                variant="secondary"
+                variant={watchlist ? "primary" : "secondary"}
                 size="sm"
-                className="flex items-center gap-1.5"
-                onClick={() => handleActionPlaceholder("Watchlist")}
+                className={`flex items-center gap-1.5 ${watchlist ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}`}
+                onClick={handleToggleWatchlist}
+                loading={toggleWatchlistMutation.isPending}
+                aria-label={watchlist ? "Remove from Watchlist" : "Add to Watchlist"}
               >
-                <Bookmark className="h-4 w-4" />
-                Watchlist
+                <Bookmark className={`h-4 w-4 ${watchlist ? "fill-current" : ""}`} />
+                {watchlist ? "Watchlisted" : "Watchlist"}
               </Button>
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -528,6 +758,17 @@ export function MediaDetails({ type }: MediaDetailsProps) {
           </div>
         )}
       </div>
+
+      {/* Progress update dialog modal overlay */}
+      <ProgressModal
+        key={isProgressModalOpen ? `open-${progressPercent}` : "closed"}
+        isOpen={isProgressModalOpen}
+        onClose={() => setIsProgressModalOpen(false)}
+        initialProgress={progressPercent}
+        onSave={handleSaveProgress}
+        isSaving={progressMutation.isPending}
+        title={title}
+      />
     </div>
   )
 }
