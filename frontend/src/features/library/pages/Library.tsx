@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { MediaCard, MediaCardSkeleton } from "@/components/ui/media-card"
 import { useLibrary } from "../hooks/useLibrary"
-import { useContinueWatching } from "@/features/tracking"
+import { useContinueWatching, useContinueWatchingShows } from "@/features/tracking"
 import type { LibraryItem, LibraryStatus } from "../types/library"
 import type { MediaItem, MediaStatus } from "@/components/ui/media-card"
 import { tmdbClient } from "@/features/discover"
@@ -22,6 +22,8 @@ export function Library() {
   const navigate = useNavigate()
   const { data: libraryItems = [], isLoading, isError, refetch } = useLibrary()
   const { data: continueWatchingList = [], isLoading: isContinueLoading } = useContinueWatching()
+  const { data: continueWatchingShows = [], isLoading: isContinueShowsLoading } =
+    useContinueWatchingShows()
 
   // Filter & Sort State
   const [searchQuery, setSearchQuery] = useState("")
@@ -141,6 +143,17 @@ export function Library() {
     }
   }, [libraryItems, isFilteringActive, mapItem])
 
+  // Merged & Sorted Continue Watching List (Movie + TV Show)
+  const mergedContinueWatching = useMemo(() => {
+    const list = [...continueWatchingList, ...continueWatchingShows]
+    list.sort((a, b) => {
+      const timeA = a.last_watched_at ? new Date(a.last_watched_at).getTime() : 0
+      const timeB = b.last_watched_at ? new Date(b.last_watched_at).getTime() : 0
+      return timeB - timeA
+    })
+    return list.slice(0, 20)
+  }, [continueWatchingList, continueWatchingShows])
+
   const renderGrid = (items: MediaItem[]) => (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
       {items.map((item) => (
@@ -157,7 +170,6 @@ export function Library() {
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
       {rawItems.map((item) => {
         const mapped = mapItem(item)
-        // Bind the progress values so MediaCard renders the progress bar
         mapped.progress = {
           current: item.progress || 0,
           total: 100,
@@ -172,15 +184,34 @@ export function Library() {
             })
           : "Recently"
 
+        const isTv = item.media_type === "tv"
+        const episodeText =
+          isTv && item.current_season && item.current_episode
+            ? `S${String(item.current_season).padStart(2, "0")}E${String(item.current_episode).padStart(2, "0")}`
+            : null
+        const episodeName = isTv ? item.last_episode_name : null
+
         return (
           <div key={item.id} className="space-y-2 group">
             <MediaCard
               item={mapped}
               onClick={() => navigate(`/${mapped.type}/${mapped.id.split("-")[1]}`)}
             />
-            <div className="flex justify-between items-center text-[10px] text-muted-foreground px-1 font-semibold">
-              <span>Last Watched:</span>
-              <span className="text-foreground font-bold">{lastWatchedDate}</span>
+            <div className="space-y-1 px-1 font-sans">
+              {episodeText && (
+                <div className="flex items-center justify-between text-[10px] font-extrabold text-primary">
+                  <span>{episodeText}</span>
+                  {episodeName && (
+                    <span className="text-[10px] text-foreground font-semibold truncate max-w-[80px]">
+                      {episodeName}
+                    </span>
+                  )}
+                </div>
+              )}
+              <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold">
+                <span>Last Watched:</span>
+                <span className="text-foreground font-bold">{lastWatchedDate}</span>
+              </div>
             </div>
           </div>
         )
@@ -196,7 +227,7 @@ export function Library() {
     </div>
   )
 
-  if (isLoading || isContinueLoading) {
+  if (isLoading || isContinueLoading || isContinueShowsLoading) {
     return (
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 space-y-8 min-h-[calc(100vh-10rem)]">
         <h1 className="font-heading text-3xl font-extrabold tracking-tight">Your Library</h1>
@@ -392,18 +423,18 @@ export function Library() {
       ) : (
         /* Grouped Sections Dashboard */
         <div className="space-y-12 animate-in fade-in duration-medium font-sans">
-          {/* 0. Continue Watching Movie Progress list */}
-          {continueWatchingList.length > 0 && (
+          {/* 0. Continue Watching Progress list */}
+          {mergedContinueWatching.length > 0 && (
             <div className="space-y-4">
               <h2 className="font-heading text-xl font-extrabold border-b border-border/60 pb-2.5 flex items-center gap-2">
                 <Play className="h-5 w-5 text-primary fill-current" />
                 Continue Watching
               </h2>
-              {renderContinueWatchingGrid(continueWatchingList)}
+              {renderContinueWatchingGrid(mergedContinueWatching)}
             </div>
           )}
 
-          {/* 1. Watching (Excluding movies in continueWatching to prevent duplication if desired, or displaying all watching) */}
+          {/* 1. Watching */}
           {sections && sections.watching.length > 0 && (
             <div className="space-y-4">
               <h2 className="font-heading text-xl font-extrabold border-b border-border/60 pb-2.5">

@@ -25,5 +25,9 @@ export const queryKeys = {
         Boolean
       ) as unknown as readonly unknown[],
     continueWatching: (userId: string) => ["tracking", "continueWatching", userId] as const,
+    continueWatchingShows: (userId: string) =>
+      ["tracking", "continueWatchingShows", userId] as const,
+    episodeProgress: (mediaId: string, season: number) =>
+      ["tracking", "episodeProgress", mediaId, season] as const,
   },
 } as const

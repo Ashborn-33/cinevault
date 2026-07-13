@@ -15,6 +15,11 @@ export interface WatchHistoryEntry {
   runtime_minutes: number | null
   completion_source: string | null
   created_at: string
+  season_number: number | null
+  episode_number: number | null
+  episode_name: string | null
+  still_path: string | null
+  air_date: string | null
 }
 
 export interface TrackingProgress {
@@ -30,4 +35,21 @@ export interface TrackingState {
   last_watched_at: string | null
   completed_at: string | null
   updated_progress_at: string | null
+}
+
+export interface EpisodeProgress {
+  id: string
+  user_id: string
+  library_id: string
+  media_id: number
+  season_number: number
+  episode_number: number
+  episode_name: string | null
+  still_path: string | null
+  air_date: string | null
+  runtime_minutes: number | null
+  watch_status: "unwatched" | "watching" | "completed"
+  watched_at: string | null
+  created_at: string
+  updated_at: string
 }

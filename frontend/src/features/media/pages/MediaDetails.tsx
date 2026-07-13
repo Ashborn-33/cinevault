@@ -33,6 +33,12 @@ import {
   useStartWatching,
   useProgress,
   useRewatchMovie,
+  useEpisodeProgress,
+  useMarkEpisode,
+  useMarkSeasonCompleted,
+  useSeasonProgress,
+  useShowProgress,
+  useStartTVShow,
 } from "@/features/tracking"
 
 import {
@@ -46,6 +52,7 @@ import {
   useTVRecommendations,
   useMovieImages,
   useTVImages,
+  useTVSeasonDetails,
 } from "../hooks/useMediaDetails"
 import type { MovieDetails, TVDetails } from "../types/media"
 
@@ -60,6 +67,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
   const isMovie = type === "movie"
 
   const [isProgressModalOpen, setIsProgressModalOpen] = React.useState(false)
+  const [selectedSeason, setSelectedSeason] = React.useState<number>(1)
 
   // TMDB Queries
   const movieDetails = useMovieDetails(mediaId)
@@ -73,6 +81,13 @@ export function MediaDetails({ type }: MediaDetailsProps) {
   const movieImages = useMovieImages(mediaId)
   const tvImages = useTVImages(mediaId)
 
+  // TMDB Season episodes query (TV show only)
+  const {
+    data: seasonDetails,
+    isLoading: isSeasonDetailsLoading,
+    isError: isSeasonDetailsError,
+  } = useTVSeasonDetails(mediaId, isMovie ? 0 : selectedSeason)
+
   // Library Queries & Mutations
   const { data: libraryItem, refetch: refetchLibraryItem } = useLibraryItem(mediaId, type)
   const addToLibraryMutation = useAddToLibrary()
@@ -81,21 +96,53 @@ export function MediaDetails({ type }: MediaDetailsProps) {
   const toggleWatchlistMutation = useToggleWatchlist()
   const updateStatusMutation = useUpdateStatus()
 
-  // Watch Tracking Mutations
+  // Watch Tracking Mutations (Movie)
   const startWatchingMutation = useStartWatching()
   const progressMutation = useProgress()
   const rewatchMutation = useRewatchMovie()
+
+  // Watch Tracking Mutations & Queries (TV Show)
+  const startTVShowMutation = useStartTVShow()
+  const markEpisodeMutation = useMarkEpisode()
+  const markSeasonCompletedMutation = useMarkSeasonCompleted()
+
+  const { data: episodeProgress = [] } = useEpisodeProgress(mediaId, isMovie ? 0 : selectedSeason)
+  const { data: seasonProgress } = useSeasonProgress(
+    mediaId,
+    isMovie ? 0 : selectedSeason,
+    seasonDetails?.episodes?.length || 0
+  )
+  const { data: showProgress } = useShowProgress(
+    mediaId,
+    !isMovie && tvDetails.data ? (tvDetails.data as TVDetails).number_of_episodes : 0
+  )
 
   const inLibrary = !!libraryItem
   const status = libraryItem?.status || "planning"
   const favorite = libraryItem?.favorite || false
   const watchlist = libraryItem?.watchlist || false
 
+  // Sync selected season once library details load
+  React.useEffect(() => {
+    if (!isMovie && libraryItem?.current_season) {
+      setTimeout(() => {
+        setSelectedSeason(libraryItem.current_season as number)
+      }, 0)
+    }
+  }, [isMovie, libraryItem?.current_season])
+
   // Tracking Helpers
   const canStart = isMovie && TrackingService.canStartWatching(libraryItem || null)
   const canContinue = isMovie && TrackingService.canContinueWatching(libraryItem || null)
   const canRewatch = isMovie && TrackingService.canRewatch(libraryItem || null)
   const progressPercent = isMovie ? TrackingService.getProgressPercentage(libraryItem || null) : 0
+
+  const isWatching = isMovie
+    ? libraryItem?.status === "watching"
+    : libraryItem?.status === "watching"
+
+  // TV Can start helper
+  const canStartTV = !isMovie && TrackingService.canStartWatching(libraryItem || null)
 
   const detailsQuery = isMovie ? movieDetails : tvDetails
   const creditsQuery = isMovie ? movieCredits : tvCredits
@@ -291,6 +338,63 @@ export function MediaDetails({ type }: MediaDetailsProps) {
     }
   }
 
+  const isEpisodeWatched = (episodeNumber: number) => {
+    return episodeProgress.some(
+      (ep) => ep.episode_number === episodeNumber && ep.watch_status === "completed"
+    )
+  }
+
+  const handleToggleEpisode = async (episode: import("@/features/media/types/media").TVEpisode) => {
+    const watched = isEpisodeWatched(episode.episode_number)
+    try {
+      await markEpisodeMutation.mutateAsync({
+        mediaId: Number(mediaId),
+        season: selectedSeason,
+        episode: episode.episode_number,
+        name: episode.name,
+        stillPath: episode.still_path,
+        airDate: episode.air_date,
+        runtime: episode.runtime || null,
+        totalShowEpisodes: (details as TVDetails).number_of_episodes || 0,
+        totalSeasonEpisodes: seasonDetails?.episodes?.length || 0,
+        title,
+        poster: details.poster_path,
+        watched: !watched,
+        expectedUpdatedAt: libraryItem?.updated_at || null,
+      })
+    } catch (err) {
+      console.error("Episode status toggle failed", err)
+    }
+  }
+
+  const handleMarkSeasonCompleted = async () => {
+    if (!seasonDetails?.episodes) return
+    const episodesData = seasonDetails.episodes.map(
+      (ep: import("@/features/media/types/media").TVEpisode) => ({
+        episode_number: ep.episode_number,
+        episode_name: ep.name,
+        still_path: ep.still_path,
+        air_date: ep.air_date,
+        runtime_minutes: ep.runtime || 0,
+      })
+    )
+
+    try {
+      await markSeasonCompletedMutation.mutateAsync({
+        mediaId: Number(mediaId),
+        season: selectedSeason,
+        episodesData,
+        totalShowEpisodes: (details as TVDetails).number_of_episodes || 0,
+        totalSeasonEpisodes: seasonDetails.episodes.length,
+        title,
+        poster: details.poster_path,
+        expectedUpdatedAt: libraryItem?.updated_at || null,
+      })
+    } catch (err) {
+      console.error("Season completion failed", err)
+    }
+  }
+
   return (
     <div className="bg-background text-foreground min-h-screen pb-24 space-y-12">
       {/* 1. Hero Backdrop Header */}
@@ -438,6 +542,43 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                 </>
               )}
 
+              {/* Play / Progress tracking primary button (TV Show only) */}
+              {!isMovie && (
+                <>
+                  {canStartTV && (
+                    <Button
+                      size="sm"
+                      variant="primary"
+                      className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 border-none text-white font-bold"
+                      onClick={() =>
+                        startTVShowMutation.mutate({
+                          mediaId: Number(mediaId),
+                          title,
+                          posterPath: details.poster_path,
+                          backdropPath: details.backdrop_path,
+                          overview: details.overview,
+                          releaseDate: dateStr,
+                          genres: details.genres?.map((g) => g.name) || [],
+                        })
+                      }
+                      loading={startTVShowMutation.isPending}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Start TV Show
+                    </Button>
+                  )}
+
+                  {isWatching && (
+                    <Badge
+                      variant="outline"
+                      className="text-primary border-primary/30 font-sans font-bold"
+                    >
+                      {showProgress?.percentage || 0}% Complete
+                    </Badge>
+                  )}
+                </>
+              )}
+
               {/* Standard Library CRUD Controls */}
               <Button
                 size="sm"
@@ -456,7 +597,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                 )}
               </Button>
 
-              {inLibrary && (!isMovie || !canContinue) && (
+              {inLibrary && (isMovie || !isWatching) && (
                 <div className="relative">
                   <select
                     value={status}
@@ -515,6 +656,181 @@ export function MediaDetails({ type }: MediaDetailsProps) {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-3 gap-10 pt-10 md:pt-4">
         <div className="lg:col-span-2 space-y-12">
+          {/* Seasons & Episodes section (TV Show only) */}
+          {!isMovie && (
+            <div className="space-y-6 border border-border p-6 rounded-card bg-surface/30 backdrop-blur-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
+                <div className="space-y-1">
+                  <h3 className="font-heading text-lg font-extrabold tracking-tight">
+                    Seasons & Episodes
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Select a season below to view episodes, track air dates, and log progress.
+                  </p>
+                </div>
+
+                {/* Season Dropdown Selector */}
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedSeason}
+                    onChange={(e) => setSelectedSeason(Number(e.target.value))}
+                    className="h-9 rounded-button border border-border bg-surface px-3 py-1 text-xs font-semibold select-none outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer"
+                    aria-label="Select season"
+                  >
+                    {(details as TVDetails).seasons?.map((s) => (
+                      <option key={s.id} value={s.season_number}>
+                        {s.name || `Season ${s.season_number}`} ({s.episode_count} eps)
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleMarkSeasonCompleted}
+                    loading={markSeasonCompletedMutation.isPending}
+                    disabled={!seasonDetails?.episodes || seasonProgress?.percentage === 100}
+                    className="font-bold text-xs"
+                  >
+                    Mark Season Completed
+                  </Button>
+                </div>
+              </div>
+
+              {/* Progress Summary indicators */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Season Progress */}
+                <div className="space-y-2 border border-border/40 p-3 rounded-button bg-zinc-950/10">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-muted-foreground">Season Progress</span>
+                    <span className="text-primary font-bold">
+                      {seasonProgress?.percentage || 0}%
+                    </span>
+                  </div>
+                  <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary transition-all duration-standard"
+                      style={{ width: `${seasonProgress?.percentage || 0}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    {seasonProgress?.watched || 0} of {seasonDetails?.episodes?.length || 0}{" "}
+                    episodes watched ({seasonProgress?.remaining || 0} remaining)
+                  </p>
+                </div>
+
+                {/* Overall Show Progress */}
+                <div className="space-y-2 border border-border/40 p-3 rounded-button bg-zinc-950/10">
+                  <div className="flex justify-between items-center text-xs font-semibold">
+                    <span className="text-muted-foreground">Overall Progress</span>
+                    <span className="text-accent font-bold">{showProgress?.percentage || 0}%</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent transition-all duration-standard"
+                      style={{ width: `${showProgress?.percentage || 0}%` }}
+                    />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    {showProgress?.watched || 0} of {(details as TVDetails).number_of_episodes || 0}{" "}
+                    episodes watched
+                  </p>
+                </div>
+              </div>
+
+              {/* Episode list */}
+              {isSeasonDetailsLoading ? (
+                <div className="flex items-center justify-center p-12">
+                  <LoadingSpinner size="md" />
+                </div>
+              ) : isSeasonDetailsError || !seasonDetails?.episodes ? (
+                <div className="p-8 border border-error/15 bg-error/5 text-center rounded-button text-xs text-error">
+                  Couldn't fetch episodes for this season.
+                </div>
+              ) : seasonDetails.episodes.length === 0 ? (
+                <div className="p-8 border border-border border-dashed text-center rounded-button text-xs text-muted-foreground">
+                  No episodes found.
+                </div>
+              ) : (
+                <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin">
+                  {seasonDetails.episodes.map(
+                    (episode: import("@/features/media/types/media").TVEpisode) => {
+                      const watched = isEpisodeWatched(episode.episode_number)
+                      const stillUrl = episode.still_path
+                        ? tmdbClient.getImageUrl(episode.still_path)
+                        : undefined
+                      const airDateFormatted = episode.air_date
+                        ? new Date(episode.air_date).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "TBA"
+
+                      return (
+                        <div
+                          key={episode.id}
+                          className="flex gap-4 p-3 border border-border bg-surface/40 rounded-card hover:border-border-hover transition-colors font-sans"
+                        >
+                          {/* Episode Still thumbnail */}
+                          <div className="h-16 w-24 shrink-0 rounded-button overflow-hidden bg-zinc-900 border border-border/40 aspect-video flex items-center justify-center">
+                            {stillUrl ? (
+                              <img
+                                src={stillUrl}
+                                alt={`S${selectedSeason}E${episode.episode_number} Still`}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Film className="h-6 w-6 text-muted-foreground/35" />
+                            )}
+                          </div>
+
+                          {/* Title, runtime, and watched toggle */}
+                          <div className="flex-grow space-y-1 min-w-0">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="space-y-0.5">
+                                <h4 className="text-xs font-bold truncate">
+                                  E{episode.episode_number} -{" "}
+                                  {episode.name || `Episode ${episode.episode_number}`}
+                                </h4>
+                                <p className="text-[10px] text-muted-foreground font-semibold">
+                                  {airDateFormatted}{" "}
+                                  {episode.runtime ? `• ${episode.runtime}m` : ""}
+                                </p>
+                              </div>
+
+                              {/* Watch Checkbox Toggle */}
+                              <button
+                                type="button"
+                                onClick={() => handleToggleEpisode(episode)}
+                                disabled={markEpisodeMutation.isPending}
+                                aria-label={`Mark episode ${episode.episode_number} as ${watched ? "unwatched" : "watched"}`}
+                                className={`h-6 px-3 rounded-full border text-[10px] font-extrabold cursor-pointer transition-all flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none ${
+                                  watched
+                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                                    : "bg-surface border-border text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                <span
+                                  className={`h-2 w-2 rounded-full ${watched ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`}
+                                />
+                                {watched ? "Watched" : "Watch"}
+                              </button>
+                            </div>
+
+                            <p className="text-[10px] text-muted-foreground line-clamp-2">
+                              {episode.overview || "No overview available for this episode."}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    }
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="space-y-4">
             <h3 className="font-heading text-lg font-extrabold border-b border-border pb-2 tracking-tight">
               Overview

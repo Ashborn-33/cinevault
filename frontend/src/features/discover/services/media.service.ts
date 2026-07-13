@@ -8,6 +8,7 @@ import type {
   CreditsResult,
   VideosResult,
   ImagesResult,
+  TVSeasonDetails,
 } from "@/features/media/types/media"
 
 let genreMapCache: Record<number, string> | null = null
@@ -195,6 +196,10 @@ export const MediaService = {
 
   async getTVImages(id: string | number): Promise<ImagesResult> {
     return tmdbClient.request<ImagesResult>(TMDB_ENDPOINTS.TV_IMAGES(id))
+  },
+
+  async getTVSeasonDetails(id: string | number, season: number): Promise<TVSeasonDetails> {
+    return tmdbClient.request<TVSeasonDetails>(TMDB_ENDPOINTS.TV_SEASON_DETAILS(id, season))
   },
 
   async getUpcoming(page = 1): Promise<{ results: MediaItem[]; totalPages: number }> {

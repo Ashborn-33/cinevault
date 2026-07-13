@@ -26,6 +26,9 @@ export interface LibraryItem {
   last_watched_at: string | null
   completed_at: string | null
   updated_progress_at: string | null
+  current_season?: number | null
+  current_episode?: number | null
+  last_episode_name?: string | null
 }
 
 export interface AddLibraryItemInput {
@@ -49,4 +52,7 @@ export interface AddLibraryItemInput {
   last_watched_at?: string | null
   completed_at?: string | null
   updated_progress_at?: string | null
+  current_season?: number | null
+  current_episode?: number | null
+  last_episode_name?: string | null
 }

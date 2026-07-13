@@ -67,6 +67,15 @@ export interface MovieDetails {
   homepage: string | null
 }
 
+export interface TVSeasonSummary {
+  id: number
+  season_number: number
+  episode_count: number
+  name: string
+  poster_path: string | null
+  air_date: string | null
+}
+
 export interface TVDetails {
   id: number
   name: string
@@ -90,4 +99,27 @@ export interface TVDetails {
   production_countries: Array<{ iso_3166_1: string; name: string }>
   production_companies: Array<{ id: number; name: string; logo_path: string | null }>
   homepage: string | null
+  seasons: TVSeasonSummary[]
+}
+
+export interface TVEpisode {
+  id: number
+  name: string
+  overview: string
+  episode_number: number
+  season_number: number
+  air_date: string | null
+  still_path: string | null
+  vote_average: number
+  vote_count: number
+  runtime: number | null
+}
+
+export interface TVSeasonDetails {
+  id: number
+  name: string
+  overview: string
+  season_number: number
+  poster_path: string | null
+  episodes: TVEpisode[]
 }

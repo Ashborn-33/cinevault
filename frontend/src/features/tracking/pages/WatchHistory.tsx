@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { History, Film, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
+import { History, Film, ArrowRight, ChevronLeft, ChevronRight, Tv } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -135,6 +135,16 @@ export function WatchHistory() {
                 timeStyle: "short",
               })
 
+              const isTv = entry.media_type === "tv"
+              const episodeText =
+                isTv && entry.season_number && entry.episode_number
+                  ? `S${String(entry.season_number).padStart(2, "0")}E${String(entry.episode_number).padStart(2, "0")}`
+                  : isTv && entry.season_number
+                    ? `Season ${entry.season_number}`
+                    : null
+
+              const actionLabel = episodeText ? `Watched ${episodeText}` : actionDetails.text
+
               return (
                 <div key={entry.id} className="relative group">
                   {/* Timeline bullet dot */}
@@ -144,8 +154,8 @@ export function WatchHistory() {
                   <div className="flex gap-4 p-4 border border-border bg-surface/50 backdrop-blur-sm rounded-card hover:border-border-hover transition-colors shadow-sm">
                     {/* Tiny Movie Poster */}
                     <div
-                      onClick={() => navigate(`/movie/${entry.media_id}`)}
-                      className="h-16 w-11 shrink-0 rounded-button overflow-hidden bg-zinc-900 border border-border/60 aspect-[2/3] cursor-pointer"
+                      onClick={() => navigate(`/${entry.media_type}/${entry.media_id}`)}
+                      className="h-16 w-11 shrink-0 rounded-button overflow-hidden bg-zinc-900 border border-border/60 aspect-[2/3] cursor-pointer flex items-center justify-center"
                     >
                       {posterUrl ? (
                         <img
@@ -153,8 +163,10 @@ export function WatchHistory() {
                           alt={entry.title}
                           className="h-full w-full object-cover"
                         />
+                      ) : isTv ? (
+                        <Tv className="h-6 w-6 text-muted-foreground/30" />
                       ) : (
-                        <Film className="h-full w-full object-cover p-2 text-muted-foreground/30" />
+                        <Film className="h-6 w-6 text-muted-foreground/30" />
                       )}
                     </div>
 
@@ -162,7 +174,7 @@ export function WatchHistory() {
                     <div className="flex-grow space-y-2.5 min-w-0">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                         <h3
-                          onClick={() => navigate(`/movie/${entry.media_id}`)}
+                          onClick={() => navigate(`/${entry.media_type}/${entry.media_id}`)}
                           className="text-sm font-extrabold tracking-tight truncate hover:text-primary cursor-pointer max-w-md"
                         >
                           {entry.title}
@@ -177,11 +189,18 @@ export function WatchHistory() {
                         <span
                           className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-bold ${actionDetails.color}`}
                         >
-                          {actionDetails.text}
+                          {actionLabel}
                         </span>
 
+                        {entry.episode_name && (
+                          <span className="text-[11px] text-foreground font-bold italic truncate max-w-[200px]">
+                            "{entry.episode_name}"
+                          </span>
+                        )}
+
                         {/* Progress changes indicator */}
-                        {entry.action === "continued" &&
+                        {!isTv &&
+                          entry.action === "continued" &&
                           entry.previous_progress !== null &&
                           entry.new_progress !== null && (
                             <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground font-semibold">
@@ -192,6 +211,12 @@ export function WatchHistory() {
                               </span>
                             </span>
                           )}
+
+                        {isTv && entry.new_progress !== null && (
+                          <span className="text-[10px] text-muted-foreground font-semibold bg-surface border border-border/60 px-2 py-0.5 rounded-full">
+                            {entry.new_progress}% Overall
+                          </span>
+                        )}
 
                         {entry.action === "completed" &&
                           entry.completion_source === "progress_100" && (

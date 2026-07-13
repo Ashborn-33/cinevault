@@ -19,4 +19,5 @@ export const TMDB_ENDPOINTS = {
   TV_RECOMMENDATIONS: (id: string | number) => `/tv/${id}/recommendations`,
   MOVIE_IMAGES: (id: string | number) => `/movie/${id}/images`,
   TV_IMAGES: (id: string | number) => `/tv/${id}/images`,
+  TV_SEASON_DETAILS: (id: string | number, season: number) => `/tv/${id}/season/${season}`,
 } as const

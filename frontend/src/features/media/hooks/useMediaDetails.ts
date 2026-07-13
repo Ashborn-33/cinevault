@@ -90,3 +90,12 @@ export function useTVImages(id: string | number) {
     staleTime: 30 * 60 * 1000,
   })
 }
+
+export function useTVSeasonDetails(id: string | number, season: number) {
+  return useQuery({
+    queryKey: ["media", "tv", "season", id, season],
+    queryFn: () => MediaService.getTVSeasonDetails(id, season),
+    enabled: !!id && season >= 0,
+    staleTime: 15 * 60 * 1000,
+  })
+}
