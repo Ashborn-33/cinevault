@@ -30,4 +30,8 @@ export const queryKeys = {
     episodeProgress: (mediaId: string, season: number) =>
       ["tracking", "episodeProgress", mediaId, season] as const,
   },
+  dashboard: {
+    continueWatching: (userId: string) => ["dashboard", "continueWatching", userId] as const,
+    upcomingEpisodes: (userId: string) => ["dashboard", "upcomingEpisodes", userId] as const,
+  },
 } as const

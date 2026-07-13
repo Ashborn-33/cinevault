@@ -8,7 +8,7 @@ import { Login, SignUp, ForgotPassword, ResetPassword, ProtectedRoute } from "@/
 import { Onboarding } from "@/features/onboarding"
 import { MediaDetails } from "@/features/media"
 import { WatchHistory } from "@/features/tracking"
-import { Dashboard } from "@/features/dashboard/pages/Dashboard"
+import { Dashboard } from "@/features/dashboard"
 import { Discover } from "@/features/discover"
 import { Library } from "@/features/library"
 import { Statistics } from "@/features/statistics/pages/Statistics"

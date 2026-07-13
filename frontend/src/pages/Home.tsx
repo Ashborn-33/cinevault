@@ -1,7 +1,18 @@
-import { Link } from "react-router-dom"
+import * as React from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { useAuth } from "@/features/auth"
 import { Button } from "@/components/ui/button"
 
 export function Home() {
+  const { session } = useAuth()
+  const navigate = useNavigate()
+
+  React.useEffect(() => {
+    if (session) {
+      navigate("/dashboard", { replace: true })
+    }
+  }, [session, navigate])
+
   return (
     <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center px-6 text-center bg-background text-foreground transition-colors duration-300">
       <div className="max-w-2xl space-y-6">
@@ -20,3 +31,4 @@ export function Home() {
     </div>
   )
 }
+export default Home

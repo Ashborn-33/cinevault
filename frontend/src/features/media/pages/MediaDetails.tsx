@@ -1,5 +1,5 @@
 import * as React from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useLocation } from "react-router-dom"
 import {
   Star,
   Heart,
@@ -122,14 +122,45 @@ export function MediaDetails({ type }: MediaDetailsProps) {
   const favorite = libraryItem?.favorite || false
   const watchlist = libraryItem?.watchlist || false
 
-  // Sync selected season once library details load
+  const location = useLocation()
+  const queryParams = React.useMemo(() => new URLSearchParams(location.search), [location.search])
+  const paramSeason = queryParams.get("season")
+  const paramEpisode = queryParams.get("episode")
+
+  // Sync selected season once library details load or URL params exist
   React.useEffect(() => {
-    if (!isMovie && libraryItem?.current_season) {
+    if (paramSeason) {
+      setTimeout(() => {
+        setSelectedSeason(Number(paramSeason))
+      }, 0)
+    } else if (!isMovie && libraryItem?.current_season) {
       setTimeout(() => {
         setSelectedSeason(libraryItem.current_season as number)
       }, 0)
     }
-  }, [isMovie, libraryItem?.current_season])
+  }, [isMovie, libraryItem?.current_season, paramSeason])
+
+  // Scroll to active episode on load if specified in URL params
+  React.useEffect(() => {
+    if (paramEpisode && !isSeasonDetailsLoading && seasonDetails?.episodes) {
+      setTimeout(() => {
+        const element = document.getElementById(`episode-${paramEpisode}`)
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" })
+          // Flash dynamic border highlight accent
+          element.classList.add("ring-2", "ring-primary", "ring-offset-2", "ring-offset-background")
+          setTimeout(() => {
+            element.classList.remove(
+              "ring-2",
+              "ring-primary",
+              "ring-offset-2",
+              "ring-offset-background"
+            )
+          }, 2500)
+        }
+      }, 300)
+    }
+  }, [paramEpisode, isSeasonDetailsLoading, seasonDetails?.episodes])
 
   // Tracking Helpers
   const canStart = isMovie && TrackingService.canStartWatching(libraryItem || null)
@@ -770,6 +801,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                       return (
                         <div
                           key={episode.id}
+                          id={`episode-${episode.episode_number}`}
                           className="flex gap-4 p-3 border border-border bg-surface/40 rounded-card hover:border-border-hover transition-colors font-sans"
                         >
                           {/* Episode Still thumbnail */}

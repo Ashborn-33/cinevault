@@ -76,6 +76,19 @@ export interface TVSeasonSummary {
   air_date: string | null
 }
 
+export interface TVEpisodeSummary {
+  id: number
+  name: string
+  overview: string
+  vote_average: number
+  vote_count: number
+  air_date: string
+  episode_number: number
+  season_number: number
+  still_path: string | null
+  runtime: number | null
+}
+
 export interface TVDetails {
   id: number
   name: string
@@ -100,6 +113,7 @@ export interface TVDetails {
   production_companies: Array<{ id: number; name: string; logo_path: string | null }>
   homepage: string | null
   seasons: TVSeasonSummary[]
+  next_episode_to_air: TVEpisodeSummary | null
 }
 
 export interface TVEpisode {

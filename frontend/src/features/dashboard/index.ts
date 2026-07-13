@@ -1,0 +1,7 @@
+export { Dashboard } from "./pages/Dashboard"
+export * from "./hooks/useDashboard"
+export { DashboardService } from "./services/dashboard.service"
+export * from "./types/dashboard"
+export { DashboardHeader } from "./components/DashboardHeader"
+export { ContinueWatchingSection } from "./components/ContinueWatchingSection"
+export { UpcomingEpisodesSection } from "./components/UpcomingEpisodesSection"
