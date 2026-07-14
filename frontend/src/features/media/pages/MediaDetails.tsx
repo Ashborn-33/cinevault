@@ -12,9 +12,11 @@ import {
   RefreshCw,
   Plus,
   Bookmark,
+  FolderPlus,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { AddToCollectionModal } from "@/features/collections/components/AddToCollectionModal"
 import { MediaCard } from "@/components/ui/media-card"
 import { Badge } from "@/components/ui/badge"
 import { LoadingSpinner } from "@/components/ui/loading"
@@ -67,6 +69,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
   const isMovie = type === "movie"
 
   const [isProgressModalOpen, setIsProgressModalOpen] = React.useState(false)
+  const [isAddToCollectionOpen, setIsAddToCollectionOpen] = React.useState(false)
   const [selectedSeason, setSelectedSeason] = React.useState<number>(1)
 
   // TMDB Queries
@@ -451,6 +454,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
               <img
                 src={posterPath}
                 alt={`${title} Poster`}
+                loading="lazy"
                 className="w-full h-full object-cover"
               />
             ) : (
@@ -675,6 +679,16 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                 variant="ghost"
                 size="sm"
                 className="flex items-center gap-1.5"
+                onClick={() => setIsAddToCollectionOpen(true)}
+              >
+                <FolderPlus className="h-4 w-4" />
+                Collection
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="flex items-center gap-1.5"
                 onClick={handleShare}
               >
                 <Share2 className="h-4 w-4" />
@@ -810,6 +824,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                               <img
                                 src={stillUrl}
                                 alt={`S${selectedSeason}E${episode.episode_number} Still`}
+                                loading="lazy"
                                 className="h-full w-full object-cover"
                               />
                             ) : (
@@ -910,6 +925,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                           <img
                             src={profileUrl}
                             alt={actor.name}
+                            loading="lazy"
                             className="h-full w-full object-cover"
                           />
                         ) : (
@@ -1116,6 +1132,15 @@ export function MediaDetails({ type }: MediaDetailsProps) {
         onSave={handleSaveProgress}
         isSaving={progressMutation.isPending}
         title={title}
+      />
+
+      <AddToCollectionModal
+        isOpen={isAddToCollectionOpen}
+        onClose={() => setIsAddToCollectionOpen(false)}
+        mediaId={Number(mediaId)}
+        mediaType={type}
+        title={title || ""}
+        posterPath={posterPath || null}
       />
     </div>
   )

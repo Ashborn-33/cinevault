@@ -161,6 +161,7 @@ export function WatchHistory() {
                         <img
                           src={posterUrl}
                           alt={entry.title}
+                          loading="lazy"
                           className="h-full w-full object-cover"
                         />
                       ) : isTv ? (

@@ -1,18 +1,77 @@
+import { lazy, Suspense } from "react"
 import { createBrowserRouter } from "react-router-dom"
 import { RootLayout } from "@/layouts/RootLayout"
 import { AuthLayout } from "@/layouts/AuthLayout"
-import { Home } from "@/pages/Home"
-import { DevShowcase } from "@/pages/DevShowcase"
+import { ProtectedRoute } from "@/features/auth"
+import { ErrorBoundary } from "@/components/common/ErrorBoundary"
+import { FullPageLoader } from "@/components/common/FullPageLoader"
 
-import { Login, SignUp, ForgotPassword, ResetPassword, ProtectedRoute } from "@/features/auth"
-import { Onboarding } from "@/features/onboarding"
-import { MediaDetails } from "@/features/media"
-import { WatchHistory } from "@/features/tracking"
-import { Dashboard } from "@/features/dashboard"
-import { Discover } from "@/features/discover"
-import { Library } from "@/features/library"
-import { Statistics } from "@/features/statistics/pages/Statistics"
-import { Collections } from "@/features/collections/pages/Collections"
+// Reusable Suspense and ErrorBoundary wrapper
+function withSuspense<P extends object>(Component: React.ComponentType<P>): React.ComponentType<P> {
+  return function W(props: P) {
+    return (
+      <ErrorBoundary>
+        <Suspense fallback={<FullPageLoader />}>
+          <Component {...props} />
+        </Suspense>
+      </ErrorBoundary>
+    )
+  }
+}
+
+// Lazy loaded page views
+const Home = withSuspense(lazy(() => import("@/pages/Home")))
+const DevShowcase = withSuspense(
+  lazy(() => import("@/pages/DevShowcase").then((m) => ({ default: m.DevShowcase })))
+)
+
+// Auth
+const Login = withSuspense(
+  lazy(() => import("@/features/auth").then((m) => ({ default: m.Login })))
+)
+const SignUp = withSuspense(
+  lazy(() => import("@/features/auth").then((m) => ({ default: m.SignUp })))
+)
+const ForgotPassword = withSuspense(
+  lazy(() => import("@/features/auth").then((m) => ({ default: m.ForgotPassword })))
+)
+const ResetPassword = withSuspense(
+  lazy(() => import("@/features/auth").then((m) => ({ default: m.ResetPassword })))
+)
+
+// Onboarding
+const Onboarding = withSuspense(
+  lazy(() => import("@/features/onboarding").then((m) => ({ default: m.Onboarding })))
+)
+
+// Features
+const Dashboard = withSuspense(
+  lazy(() => import("@/features/dashboard").then((m) => ({ default: m.Dashboard })))
+)
+const Discover = withSuspense(
+  lazy(() => import("@/features/discover").then((m) => ({ default: m.Discover })))
+)
+const MediaDetails = withSuspense(
+  lazy(() => import("@/features/media").then((m) => ({ default: m.MediaDetails })))
+)
+const Library = withSuspense(
+  lazy(() => import("@/features/library").then((m) => ({ default: m.Library })))
+)
+const WatchHistory = withSuspense(
+  lazy(() => import("@/features/tracking").then((m) => ({ default: m.WatchHistory })))
+)
+const Statistics = withSuspense(
+  lazy(() => import("@/features/statistics").then((m) => ({ default: m.Statistics })))
+)
+const Collections = withSuspense(
+  lazy(() => import("@/features/collections").then((m) => ({ default: m.Collections })))
+)
+const CollectionDetails = withSuspense(
+  lazy(() => import("@/features/collections").then((m) => ({ default: m.CollectionDetails })))
+)
+const Releases = withSuspense(
+  lazy(() => import("@/features/releases").then((m) => ({ default: m.Releases })))
+)
 
 export const router = createBrowserRouter([
   {
@@ -88,6 +147,14 @@ export const router = createBrowserRouter([
           {
             path: "collections",
             element: <Collections />,
+          },
+          {
+            path: "collections/:id",
+            element: <CollectionDetails />,
+          },
+          {
+            path: "releases",
+            element: <Releases />,
           },
         ],
       },

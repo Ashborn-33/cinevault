@@ -1,6 +1,16 @@
 import * as React from "react"
 import { NavLink, useLocation, Link, useNavigate } from "react-router-dom"
-import { Home, Compass, Library, BarChart3, Layers, Search, Sun, Moon } from "lucide-react"
+import {
+  Home,
+  Compass,
+  Library,
+  BarChart3,
+  Layers,
+  Calendar,
+  Search,
+  Sun,
+  Moon,
+} from "lucide-react"
 
 import { useTheme } from "@/providers/ThemeProvider"
 import { useAuth } from "@/features/auth"
@@ -61,6 +71,7 @@ export function Navbar() {
     { path: "/library", label: "Library", icon: Library },
     { path: "/statistics", label: "Statistics", icon: BarChart3 },
     { path: "/collections", label: "Collections", icon: Layers },
+    { path: "/releases", label: "Releases", icon: Calendar },
   ]
 
   return (

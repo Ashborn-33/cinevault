@@ -42,6 +42,7 @@ export function ContinueWatchingCard({ item }: ContinueWatchingCardProps) {
           <img
             src={posterUrl}
             alt={item.title}
+            loading="lazy"
             className="h-full w-full object-cover group-hover:scale-105 transition-transform"
           />
         ) : isTv ? (

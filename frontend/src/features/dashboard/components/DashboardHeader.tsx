@@ -37,6 +37,7 @@ export function DashboardHeader({ inProgressCount }: DashboardHeaderProps) {
             <img
               src={avatarUrl}
               alt={`${username}'s Profile`}
+              loading="lazy"
               className="h-full w-full object-cover"
             />
           ) : (

@@ -60,6 +60,7 @@ export function UpcomingEpisodeCard({ episode }: UpcomingEpisodeCardProps) {
           <img
             src={posterUrl}
             alt={episode.showName}
+            loading="lazy"
             className="h-full w-full object-cover group-hover:scale-105 transition-transform"
           />
         ) : (
