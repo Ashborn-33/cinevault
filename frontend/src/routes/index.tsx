@@ -78,6 +78,9 @@ const Activity = withSuspense(
 const Profile = withSuspense(
   lazy(() => import("@/features/profile").then((m) => ({ default: m.Profile })))
 )
+const SettingsPage = withSuspense(
+  lazy(() => import("@/features/settings").then((m) => ({ default: m.SettingsPage })))
+)
 
 export const router = createBrowserRouter([
   {
@@ -169,6 +172,10 @@ export const router = createBrowserRouter([
           {
             path: "profile",
             element: <Profile />,
+          },
+          {
+            path: "settings",
+            element: <SettingsPage />,
           },
         ],
       },
