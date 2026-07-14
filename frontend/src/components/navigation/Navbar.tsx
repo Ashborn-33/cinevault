@@ -7,6 +7,7 @@ import {
   BarChart3,
   Layers,
   Calendar,
+  History,
   Search,
   Sun,
   Moon,
@@ -72,6 +73,7 @@ export function Navbar() {
     { path: "/statistics", label: "Statistics", icon: BarChart3 },
     { path: "/collections", label: "Collections", icon: Layers },
     { path: "/releases", label: "Releases", icon: Calendar },
+    { path: "/activity", label: "Activity", icon: History },
   ]
 
   return (

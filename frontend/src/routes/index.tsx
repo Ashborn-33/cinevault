@@ -72,6 +72,9 @@ const CollectionDetails = withSuspense(
 const Releases = withSuspense(
   lazy(() => import("@/features/releases").then((m) => ({ default: m.Releases })))
 )
+const Activity = withSuspense(
+  lazy(() => import("@/features/activity").then((m) => ({ default: m.Activity })))
+)
 
 export const router = createBrowserRouter([
   {
@@ -155,6 +158,10 @@ export const router = createBrowserRouter([
           {
             path: "releases",
             element: <Releases />,
+          },
+          {
+            path: "activity",
+            element: <Activity />,
           },
         ],
       },
