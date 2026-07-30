@@ -29,7 +29,7 @@ export function ProtectedRoute() {
 
   // Prevent onboarded users from accessing /onboarding
   if (onboardingCompleted && location.pathname === "/onboarding") {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to="/home" replace />
   }
 
   return <Outlet />

@@ -31,7 +31,7 @@ export function Onboarding() {
     setSaving(true)
     try {
       await completeOnboarding(data.preferredContent, data.favoriteGenres, data.avatarUrl)
-      navigate("/dashboard", { replace: true })
+      navigate("/home", { replace: true })
     } catch (err) {
       console.error("Failed to complete onboarding", err)
       alert("Failed to save onboarding settings. Please try again.")

@@ -1,11 +1,7 @@
 import { useProfile } from "@/features/onboarding"
-import { Tv, Sparkles, Film } from "lucide-react"
+import { Sparkles, Film, Tv } from "lucide-react"
 
-interface DashboardHeaderProps {
-  inProgressCount: number
-}
-
-export function DashboardHeader({ inProgressCount }: DashboardHeaderProps) {
+export function DashboardHeader() {
   const { profile } = useProfile()
   const username = profile?.username || "CineVault Member"
   const avatarUrl = profile?.avatar_url
@@ -17,15 +13,16 @@ export function DashboardHeader({ inProgressCount }: DashboardHeaderProps) {
     year: "numeric",
   })
 
-  // Dynamic motivational messages
-  const getMotivationalMessage = () => {
-    if (inProgressCount === 0) {
-      return "Start building your library and track your movie and TV progress!"
+  // Dynamic greeting by hour
+  const getGreeting = () => {
+    const hour = new Date().getHours()
+    if (hour >= 5 && hour < 12) {
+      return `Good Morning, ${username} ☀️`
     }
-    if (inProgressCount === 1) {
-      return "You have 1 title in progress. Let's finish it!"
+    if (hour >= 12 && hour < 17) {
+      return `Good Afternoon, ${username} 🌤️`
     }
-    return `You have ${inProgressCount} titles in progress. Ready to dive back in?`
+    return `Good Evening, ${username} 🌙`
   }
 
   return (
@@ -45,13 +42,15 @@ export function DashboardHeader({ inProgressCount }: DashboardHeaderProps) {
           )}
         </div>
 
-        {/* Greetings and motivational messages */}
+        {/* Greetings and dynamic time subtitle */}
         <div className="space-y-1 min-w-0">
-          <h1 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2">
-            Welcome back, <span className="text-primary truncate">{username}</span>
+          <h1 className="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2 text-foreground">
+            {getGreeting()}
             <Sparkles className="h-4.5 w-4.5 text-accent animate-pulse shrink-0" />
           </h1>
-          <p className="text-xs text-muted-foreground font-semibold">{getMotivationalMessage()}</p>
+          <p className="text-xs text-muted-foreground font-semibold">
+            Continue your entertainment journey.
+          </p>
         </div>
       </div>
 

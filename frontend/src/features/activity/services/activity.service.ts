@@ -26,100 +26,113 @@ export const ActivityService = {
     limit = 20,
     filters?: ActivityFilters
   ): Promise<{ data: ActivityItem[]; hasMore: boolean }> {
-    const fetchLimit = page * limit
+    try {
+      const fetchLimit = page * limit
 
-    // 1. Fetch tables in parallel
-    const [watchHistoryRes, collectionsRes, collectionItemsRes] = await Promise.all([
-      supabase
-        .from("watch_history")
-        .select("*")
-        .eq("user_id", userId)
-        .order("watch_date", { ascending: false })
-        .limit(fetchLimit),
-      supabase
-        .from("collections")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
-        .limit(fetchLimit),
-      supabase
-        .from("collection_items")
-        .select("*, collections!inner(user_id, name)")
-        .eq("collections.user_id", userId)
-        .order("added_at", { ascending: false })
-        .limit(fetchLimit),
-    ])
+      // 1. Fetch tables in parallel
+      const [watchHistoryRes, collectionsRes, collectionItemsRes] = await Promise.all([
+        supabase
+          .from("watch_history")
+          .select("*")
+          .eq("user_id", userId)
+          .order("watch_date", { ascending: false })
+          .limit(fetchLimit),
+        supabase
+          .from("collections")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(fetchLimit),
+        supabase
+          .from("collection_items")
+          .select("*, collections!inner(user_id, name)")
+          .eq("collections.user_id", userId)
+          .order("added_at", { ascending: false })
+          .limit(fetchLimit),
+      ])
 
-    if (watchHistoryRes.error) throw watchHistoryRes.error
-    if (collectionsRes.error) throw collectionsRes.error
-    if (collectionItemsRes.error) throw collectionItemsRes.error
+      if (watchHistoryRes.error) throw watchHistoryRes.error
+      if (collectionsRes.error) throw collectionsRes.error
+      if (collectionItemsRes.error) throw collectionItemsRes.error
 
-    const watchHistory = watchHistoryRes.data || []
-    const collections = collectionsRes.data || []
-    const collectionItems = collectionItemsRes.data || []
+      const watchHistory = watchHistoryRes.data || []
+      const collections = collectionsRes.data || []
+      const collectionItems = collectionItemsRes.data || []
 
-    // 2. Map and Merge into ActivityItems
-    let merged = this.mergeActivities(watchHistory, collections, collectionItems)
+      // 2. Map and Merge into ActivityItems
+      let merged = this.mergeActivities(watchHistory, collections, collectionItems)
 
-    // 3. Apply Filters
-    if (filters) {
-      // Filter Category
-      if (filters.category !== "all") {
-        if (filters.category === "movie") {
-          merged = merged.filter((item) => item.mediaType === "movie")
-        } else if (filters.category === "tv") {
-          merged = merged.filter((item) => item.mediaType === "tv")
-        } else if (filters.category === "collection") {
-          merged = merged.filter((item) => item.type.startsWith("collection_"))
-        } else if (filters.category === "completed") {
+      // 3. Apply Filters
+      if (filters) {
+        // Filter Category
+        if (filters.category !== "all") {
+          if (filters.category === "movie") {
+            merged = merged.filter((item) => item.mediaType === "movie")
+          } else if (filters.category === "tv") {
+            merged = merged.filter((item) => item.mediaType === "tv")
+          } else if (filters.category === "collection") {
+            merged = merged.filter((item) => item.type.startsWith("collection_"))
+          } else if (filters.category === "completed") {
+            merged = merged.filter(
+              (item) =>
+                item.type === "movie_completed" ||
+                item.type === "tv_completed" ||
+                item.type === "tv_season_completed"
+            )
+          } else if (filters.category === "started") {
+            merged = merged.filter(
+              (item) => item.type === "movie_started" || item.type === "tv_started"
+            )
+          } else if (filters.category === "progress") {
+            merged = merged.filter(
+              (item) => item.type === "movie_continued" || item.type === "tv_episode"
+            )
+          }
+        }
+
+        // Filter Search
+        if (filters.search.trim()) {
+          const q = filters.search.toLowerCase()
           merged = merged.filter(
             (item) =>
-              item.type === "movie_completed" ||
-              item.type === "tv_completed" ||
-              item.type === "tv_season_completed"
-          )
-        } else if (filters.category === "started") {
-          merged = merged.filter(
-            (item) => item.type === "movie_started" || item.type === "tv_started"
-          )
-        } else if (filters.category === "progress") {
-          merged = merged.filter(
-            (item) => item.type === "movie_continued" || item.type === "tv_episode"
+              item.title.toLowerCase().includes(q) ||
+              item.details?.collectionName?.toLowerCase().includes(q) ||
+              item.details?.episodeName?.toLowerCase().includes(q)
           )
         }
+
+        // Sort
+        const isNewest = filters.sort === "newest"
+        merged.sort((a, b) => {
+          const timeA = new Date(a.timestamp).getTime()
+          const timeB = new Date(b.timestamp).getTime()
+          return isNewest ? timeB - timeA : timeA - timeB
+        })
+      } else {
+        // Default Sort: Newest First
+        merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
       }
 
-      // Filter Search
-      if (filters.search.trim()) {
-        const q = filters.search.toLowerCase()
-        merged = merged.filter(
-          (item) =>
-            item.title.toLowerCase().includes(q) ||
-            item.details?.collectionName?.toLowerCase().includes(q) ||
-            item.details?.episodeName?.toLowerCase().includes(q)
-        )
+      // 4. Paginate
+      const startIndex = (page - 1) * limit
+      const paginatedSlice = merged.slice(startIndex, startIndex + limit)
+      const hasMore = merged.length > startIndex + limit
+
+      const result = {
+        data: paginatedSlice,
+        hasMore,
       }
 
-      // Sort
-      const isNewest = filters.sort === "newest"
-      merged.sort((a, b) => {
-        const timeA = new Date(a.timestamp).getTime()
-        const timeB = new Date(b.timestamp).getTime()
-        return isNewest ? timeB - timeA : timeA - timeB
-      })
-    } else {
-      // Default Sort: Newest First
-      merged.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    }
+      if (page === 1 && (!filters || filters.category === "all")) {
+        localStorage.setItem(`cinevault_activity_timeline_${userId}`, JSON.stringify(result))
+      }
 
-    // 4. Paginate
-    const startIndex = (page - 1) * limit
-    const paginatedSlice = merged.slice(startIndex, startIndex + limit)
-    const hasMore = merged.length > startIndex + limit
-
-    return {
-      data: paginatedSlice,
-      hasMore,
+      return result
+    } catch (err) {
+      console.warn("Offline fallback for getTimeline:", err)
+      const cached = localStorage.getItem(`cinevault_activity_timeline_${userId}`)
+      if (cached) return JSON.parse(cached)
+      throw err
     }
   },
 

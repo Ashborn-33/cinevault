@@ -63,7 +63,7 @@ export function ProgressModal({
 
   return (
     <div
-      className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-standard"
+      className="fixed inset-0 z-modal-backdrop flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-in fade-in duration-standard"
       role="dialog"
       aria-modal="true"
       aria-labelledby="progress-modal-title"
@@ -73,7 +73,7 @@ export function ProgressModal({
       <div
         ref={modalRef}
         tabIndex={-1}
-        className="relative w-full max-w-md border border-border bg-surface rounded-card p-6 shadow-level-3 space-y-6 focus:outline-none z-content"
+        className="relative w-full max-w-md border border-border bg-surface rounded-card p-6 shadow-level-3 space-y-6 focus:outline-none z-modal-content"
       >
         <div className="flex items-center justify-between border-b border-border/60 pb-3">
           <div className="flex items-center gap-2">

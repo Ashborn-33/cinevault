@@ -1,4 +1,5 @@
 export interface OverviewData {
+  // Legacy fields (deprecated but kept for compatibility)
   totalWatchTime: number // in minutes
   moviesCompleted: number
   episodesCompleted: number
@@ -7,6 +8,24 @@ export interface OverviewData {
   currentStreak: number
   longestStreak: number
   completionRate: number
+
+  // New unified fields (CV-045.1)
+  movies: number
+  tvShows: number
+  episodes: number
+  watchMinutes: number
+  watchHours: number
+  completedMovies: number
+  completedShows: number
+  watching: number
+  planning: number
+  dropped: number
+  rewatches: number
+  averageRating: number
+  favoriteGenre: string
+  mostWatchedGenre: string
+  lastActivity: string | null
+  continueWatching: number
 }
 
 export interface GenreStatEntry {

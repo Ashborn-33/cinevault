@@ -29,64 +29,84 @@ interface DBCollectionItemRow {
 export const CollectionsService = {
   // getCollections: Fetches user collections including mapped items count
   async getCollections(userId: string): Promise<Collection[]> {
-    const { data, error } = await supabase
-      .from("collections")
-      .select("*, collection_items(poster_path, media_id)")
-      .eq("user_id", userId)
-      .order("updated_at", { ascending: false })
+    try {
+      const { data, error } = await supabase
+        .from("collections")
+        .select("*, collection_items(poster_path, media_id)")
+        .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
 
-    if (error) throw error
+      if (error) throw error
 
-    const rows = (data || []) as unknown as DBCollectionRow[]
+      const rows = (data || []) as unknown as DBCollectionRow[]
 
-    return rows.map((col) => ({
-      id: col.id,
-      user_id: col.user_id,
-      name: col.name,
-      description: col.description,
-      cover_media_id: col.cover_media_id,
-      cover_media_type: col.cover_media_type,
-      color: col.color,
-      icon: col.icon,
-      is_smart: col.is_smart,
-      created_at: col.created_at,
-      updated_at: col.updated_at,
-      items_count: col.collection_items?.length || 0,
-      poster_path: col.collection_items?.[0]?.poster_path || null,
-    }))
+      const collections = rows.map((col) => ({
+        id: col.id,
+        user_id: col.user_id,
+        name: col.name,
+        description: col.description,
+        cover_media_id: col.cover_media_id,
+        cover_media_type: col.cover_media_type,
+        color: col.color,
+        icon: col.icon,
+        is_smart: col.is_smart,
+        created_at: col.created_at,
+        updated_at: col.updated_at,
+        items_count: col.collection_items?.length || 0,
+        poster_path: col.collection_items?.[0]?.poster_path || null,
+      }))
+
+      localStorage.setItem(`cinevault_collections_${userId}`, JSON.stringify(collections))
+      return collections
+    } catch (err) {
+      console.warn("Offline fallback for getCollections:", err)
+      const cached = localStorage.getItem(`cinevault_collections_${userId}`)
+      if (cached) return JSON.parse(cached) as Collection[]
+      throw err
+    }
   },
 
   // getCollection: Fetches a single collection details along with sorted items
   async getCollection(collectionId: string): Promise<CollectionDetails> {
-    const { data: collection, error: colError } = await supabase
-      .from("collections")
-      .select("*")
-      .eq("id", collectionId)
-      .single()
+    try {
+      const { data: collection, error: colError } = await supabase
+        .from("collections")
+        .select("*")
+        .eq("id", collectionId)
+        .single()
 
-    if (colError) throw colError
+      if (colError) throw colError
 
-    const { data: items, error: itemsError } = await supabase
-      .from("collection_items")
-      .select("*")
-      .eq("collection_id", collectionId)
-      .order("added_at", { ascending: false })
+      const { data: items, error: itemsError } = await supabase
+        .from("collection_items")
+        .select("*")
+        .eq("collection_id", collectionId)
+        .order("added_at", { ascending: false })
 
-    if (itemsError) throw itemsError
+      if (itemsError) throw itemsError
 
-    const itemRows = (items || []) as unknown as DBCollectionItemRow[]
+      const itemRows = (items || []) as unknown as DBCollectionItemRow[]
 
-    return {
-      ...(collection as unknown as DBCollectionRow),
-      items: itemRows.map((item) => ({
-        id: item.id,
-        collection_id: item.collection_id,
-        media_id: item.media_id,
-        media_type: item.media_type as "movie" | "tv",
-        title: item.title,
-        poster_path: item.poster_path,
-        added_at: item.added_at,
-      })),
+      const details = {
+        ...(collection as unknown as DBCollectionRow),
+        items: itemRows.map((item) => ({
+          id: item.id,
+          collection_id: item.collection_id,
+          media_id: item.media_id,
+          media_type: item.media_type as "movie" | "tv",
+          title: item.title,
+          poster_path: item.poster_path,
+          added_at: item.added_at,
+        })),
+      }
+
+      localStorage.setItem(`cinevault_collection_details_${collectionId}`, JSON.stringify(details))
+      return details
+    } catch (err) {
+      console.warn("Offline fallback for getCollection:", err)
+      const cached = localStorage.getItem(`cinevault_collection_details_${collectionId}`)
+      if (cached) return JSON.parse(cached) as CollectionDetails
+      throw err
     }
   },
 

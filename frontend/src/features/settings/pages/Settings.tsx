@@ -6,6 +6,7 @@ import { AccentColorPicker } from "../components/AccentColorPicker"
 import { SettingsToggle } from "../components/SettingsToggle"
 import { SettingsSelect } from "../components/SettingsSelect"
 import { SettingsSkeleton } from "../components/SettingsSkeleton"
+import { DeleteAccountModal } from "../components/DeleteAccountModal"
 import { useTheme } from "@/providers/ThemeProvider"
 import {
   Settings,
@@ -20,12 +21,14 @@ import {
   ChevronUp,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useNavigate } from "react-router-dom"
 
 const STREAMING_SERVICES = ["Netflix", "Prime Video", "Disney+", "Apple TV+", "Crunchyroll", "Max"]
 const LANGUAGES = ["English", "Japanese", "Spanish", "French", "Korean", "German"]
 
 export function SettingsPage() {
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   const { data: pref, isLoading, isError, error } = usePreferences()
   const updatePref = useUpdatePreferences()
@@ -43,6 +46,7 @@ export function SettingsPage() {
     privacy: false,
     account: false,
   })
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
 
   // Synchronize Accent color in the DOM
   useEffect(() => {
@@ -449,18 +453,10 @@ export function SettingsPage() {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => alert("Data export is future-ready.")}
-                    >
-                      Export Data
+                    <Button variant="outline" size="sm" onClick={() => navigate("/import-export")}>
+                      Export & Import Data
                     </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => alert("Account deletion is future-ready.")}
-                    >
+                    <Button variant="destructive" size="sm" onClick={() => setIsDeleteOpen(true)}>
                       Delete Account
                     </Button>
                   </div>
@@ -521,11 +517,28 @@ export function SettingsPage() {
                     <p className="text-emerald-400 font-extrabold">Connected & Encrypted</p>
                   </div>
                 </div>
+
+                {/* Danger Zone */}
+                <div className="border border-error/25 bg-error/5 rounded-card p-4 space-y-4 mt-6">
+                  <div className="space-y-1">
+                    <span className="text-xs font-bold text-error">Danger Zone</span>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">
+                      Permanently delete your CineVault account. This deletes all of your imported
+                      data, watch history, collections, settings, and profile. This action cannot be
+                      undone.
+                    </p>
+                  </div>
+                  <Button variant="destructive" size="sm" onClick={() => setIsDeleteOpen(true)}>
+                    Delete Account
+                  </Button>
+                </div>
               </div>
             )}
           </section>
         </div>
       </div>
+
+      <DeleteAccountModal isOpen={isDeleteOpen} onClose={() => setIsDeleteOpen(false)} />
     </div>
   )
 }

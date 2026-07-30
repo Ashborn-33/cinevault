@@ -71,12 +71,12 @@ export function EditCollectionModal({
   }
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-modal-backdrop flex items-center justify-center p-4">
       {/* Overlay Backdrop */}
       <div className="absolute inset-0 bg-background/80 backdrop-blur-md" onClick={onClose} />
 
       {/* Modal Container */}
-      <div className="relative w-full max-w-md p-6 border border-border bg-surface rounded-card shadow-level-3 font-sans text-foreground animate-in fade-in zoom-in-95 duration-standard">
+      <div className="relative w-full max-w-md p-6 border border-border bg-surface rounded-card shadow-level-3 font-sans text-foreground animate-in fade-in zoom-in-95 duration-standard z-modal-content">
         {/* Close Button */}
         <button
           onClick={onClose}

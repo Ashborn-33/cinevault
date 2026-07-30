@@ -125,6 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       onLogout()
 
       // Cache Management on Logout: Clear authenticated query caches
+      // On account deletion, useDeleteAccount hook will call queryClient.clear() to purge all cached media states
       queryClient.removeQueries({ queryKey: ["auth"] })
       queryClient.removeQueries({ queryKey: ["library"] })
       queryClient.removeQueries({ queryKey: ["collections"] })

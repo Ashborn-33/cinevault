@@ -3,21 +3,30 @@ import type { UserProfile, ViewerLevel } from "../types/profile"
 import { StatisticsService } from "@/features/statistics/services/statistics.service"
 
 export const ProfileService = {
-  // getProfile: Fetches profile row
   async getProfile(userId: string): Promise<UserProfile | null> {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle()
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle()
 
-    if (error) throw error
-    if (!data) return null
+      if (error) throw error
+      if (!data) return null
 
-    return {
-      ...data,
-      pinned_collections: data.pinned_collections || [],
-    } as UserProfile
+      const profile = {
+        ...data,
+        pinned_collections: data.pinned_collections || [],
+      } as UserProfile
+
+      localStorage.setItem(`cinevault_profile_${userId}`, JSON.stringify(profile))
+      return profile
+    } catch (err) {
+      console.warn("Offline fallback triggered for getProfile:", err)
+      const cached = localStorage.getItem(`cinevault_profile_${userId}`)
+      if (cached) return JSON.parse(cached) as UserProfile
+      throw err
+    }
   },
 
   // updateProfile: Updates profile columns

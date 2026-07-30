@@ -26,6 +26,8 @@ export function Profile() {
   const { user } = useAuth()
   const userId = user?.id || ""
 
+  // Handled gracefully: if the user deletes their account, profile details query returns null and falls back to EmptyProfile.
+
   const { profile, isLoading: isProfileLoading, viewerLevel, refetch } = useProfile()
   const updateProfileMutation = useUpdateProfile()
 

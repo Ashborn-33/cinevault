@@ -372,14 +372,14 @@ export function MediaDetails({ type }: MediaDetailsProps) {
     }
   }
 
-  const isEpisodeWatched = (episodeNumber: number) => {
-    return episodeProgress.some(
-      (ep) => ep.episode_number === episodeNumber && ep.watch_status === "completed"
+  const getEpisodeWatchCount = (episodeNumber: number) => {
+    const ep = episodeProgress.find(
+      (e) => e.episode_number === episodeNumber && e.watch_status === "completed"
     )
+    return ep ? ep.watch_count || 1 : 0
   }
 
   const handleToggleEpisode = async (episode: import("@/features/media/types/media").TVEpisode) => {
-    const watched = isEpisodeWatched(episode.episode_number)
     try {
       await markEpisodeMutation.mutateAsync({
         mediaId: Number(mediaId),
@@ -393,7 +393,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
         totalSeasonEpisodes: seasonDetails?.episodes?.length || 0,
         title,
         poster: details.poster_path,
-        watched: !watched,
+        watched: true,
         expectedUpdatedAt: libraryItem?.updated_at || null,
       })
     } catch (err) {
@@ -800,7 +800,7 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                 <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 scrollbar-thin">
                   {seasonDetails.episodes.map(
                     (episode: import("@/features/media/types/media").TVEpisode) => {
-                      const watched = isEpisodeWatched(episode.episode_number)
+                      const watchedCount = getEpisodeWatchCount(episode.episode_number)
                       const stillUrl = episode.still_path
                         ? tmdbClient.getImageUrl(episode.still_path)
                         : undefined
@@ -851,17 +851,25 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                                 type="button"
                                 onClick={() => handleToggleEpisode(episode)}
                                 disabled={markEpisodeMutation.isPending}
-                                aria-label={`Mark episode ${episode.episode_number} as ${watched ? "unwatched" : "watched"}`}
+                                aria-label={
+                                  watchedCount > 0
+                                    ? "Watch again"
+                                    : `Mark episode ${episode.episode_number} as watched`
+                                }
                                 className={`h-6 px-3 rounded-full border text-[10px] font-extrabold cursor-pointer transition-all flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none ${
-                                  watched
+                                  watchedCount > 0
                                     ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
                                     : "bg-surface border-border text-muted-foreground hover:text-foreground"
                                 }`}
                               >
                                 <span
-                                  className={`h-2 w-2 rounded-full ${watched ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`}
+                                  className={`h-2 w-2 rounded-full ${watchedCount > 0 ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`}
                                 />
-                                {watched ? "Watched" : "Watch"}
+                                {watchedCount > 1
+                                  ? `Watched ×${watchedCount}`
+                                  : watchedCount === 1
+                                    ? "Watched"
+                                    : "Watch"}
                               </button>
                             </div>
 

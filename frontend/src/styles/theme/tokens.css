@@ -93,13 +93,16 @@
   --container-xl: 1280px;
   --container-2xl: 1536px;
 
-  /* Z-index layers */
-  --z-dropdown: 1000;
-  --z-sticky: 1020;
-  --z-fixed: 1030;
-  --z-modal: 1040;
-  --z-popover: 1050;
-  --z-toast: 1060;
+  /* Global Z-Index System (CV-040.7) */
+  --z-sticky: 10;
+  --z-dropdown: 20;
+  --z-navbar: 50;
+  --z-profile-dropdown: 60;
+  --z-drawer: 70;
+  --z-modal-backdrop: 80;
+  --z-modal: 80;
+  --z-modal-content: 90;
+  --z-toast: 100;
 
   /* Typography / Fonts */
   --font-heading: 'Outfit', 'Plus Jakarta Sans', sans-serif;

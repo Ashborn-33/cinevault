@@ -1,0 +1,3 @@
+user_id,lists,s_key,type,name,ordering,created_at,objects,description,is_public
+75184478,[],collection,,,,,,,
+75184478,,favorite-series,list,,0,2026-04-17 08:05:50,[map[created_at:1.74382948e+09 id:81797 type:series uuid:9851e41d-c538-44a9-a656-46de8a59471e]],,false

@@ -9,7 +9,7 @@ export function Home() {
 
   React.useEffect(() => {
     if (session) {
-      navigate("/dashboard", { replace: true })
+      navigate("/home", { replace: true })
     }
   }, [session, navigate])
 

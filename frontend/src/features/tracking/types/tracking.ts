@@ -50,6 +50,9 @@ export interface EpisodeProgress {
   runtime_minutes: number | null
   watch_status: "unwatched" | "watching" | "completed"
   watched_at: string | null
+  watch_count?: number
+  first_watched_at?: string | null
+  last_watched_at?: string | null
   created_at: string
   updated_at: string
 }

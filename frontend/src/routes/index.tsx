@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react"
-import { createBrowserRouter } from "react-router-dom"
+import { createBrowserRouter, Navigate } from "react-router-dom"
 import { RootLayout } from "@/layouts/RootLayout"
 import { AuthLayout } from "@/layouts/AuthLayout"
 import { ProtectedRoute } from "@/features/auth"
@@ -45,8 +45,8 @@ const Onboarding = withSuspense(
 )
 
 // Features
-const Dashboard = withSuspense(
-  lazy(() => import("@/features/dashboard").then((m) => ({ default: m.Dashboard })))
+const AuthenticatedHome = withSuspense(
+  lazy(() => import("@/features/dashboard").then((m) => ({ default: m.Home })))
 )
 const Discover = withSuspense(
   lazy(() => import("@/features/discover").then((m) => ({ default: m.Discover })))
@@ -80,6 +80,22 @@ const Profile = withSuspense(
 )
 const SettingsPage = withSuspense(
   lazy(() => import("@/features/settings").then((m) => ({ default: m.SettingsPage })))
+)
+const Recommendations = withSuspense(
+  lazy(() => import("@/features/recommendations").then((m) => ({ default: m.Recommendations })))
+)
+const OfflinePage = withSuspense(
+  lazy(() =>
+    import("@/features/pwa/components/OfflinePage").then((m) => ({ default: m.OfflinePage }))
+  )
+)
+const Wrapped = withSuspense(
+  lazy(() => import("@/features/wrapped/pages/Wrapped").then((m) => ({ default: m.Wrapped })))
+)
+const ImportExport = withSuspense(
+  lazy(() =>
+    import("@/features/import-export/pages/ImportExport").then((m) => ({ default: m.ImportExport }))
+  )
 )
 
 export const router = createBrowserRouter([
@@ -126,8 +142,12 @@ export const router = createBrowserRouter([
             element: <Onboarding />,
           },
           {
+            path: "home",
+            element: <AuthenticatedHome />,
+          },
+          {
             path: "dashboard",
-            element: <Dashboard />,
+            element: <Navigate to="/home" replace />,
           },
           {
             path: "discover",
@@ -176,6 +196,22 @@ export const router = createBrowserRouter([
           {
             path: "settings",
             element: <SettingsPage />,
+          },
+          {
+            path: "recommendations",
+            element: <Recommendations />,
+          },
+          {
+            path: "wrapped",
+            element: <Wrapped />,
+          },
+          {
+            path: "import-export",
+            element: <ImportExport />,
+          },
+          {
+            path: "offline",
+            element: <OfflinePage />,
           },
         ],
       },

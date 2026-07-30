@@ -23,87 +23,123 @@ function getLocalDateString(dateInput: string | Date): string {
 export const StatisticsService = {
   // Raw Data Fetchers
   async getLibraryItems(userId: string): Promise<LibraryItem[]> {
-    const { data, error } = await supabase.from("library").select("*").eq("user_id", userId)
-    if (error) throw error
-    return data as LibraryItem[]
+    try {
+      const { data, error } = await supabase.from("library").select("*").eq("user_id", userId)
+      if (error) throw error
+      localStorage.setItem(`cinevault_lib_items_${userId}`, JSON.stringify(data))
+      return data as LibraryItem[]
+    } catch (err) {
+      console.warn("Offline fallback for getLibraryItems:", err)
+      const cached = localStorage.getItem(`cinevault_lib_items_${userId}`)
+      if (cached) return JSON.parse(cached) as LibraryItem[]
+      throw err
+    }
   },
 
   async getWatchHistory(userId: string): Promise<WatchHistoryEntry[]> {
-    const { data, error } = await supabase
-      .from("watch_history")
-      .select("*")
-      .eq("user_id", userId)
-      .order("watch_date", { ascending: true })
-    if (error) throw error
-    return data as WatchHistoryEntry[]
+    try {
+      const { data, error } = await supabase
+        .from("watch_history")
+        .select("*")
+        .eq("user_id", userId)
+        .order("watch_date", { ascending: true })
+      if (error) throw error
+      localStorage.setItem(`cinevault_watch_history_${userId}`, JSON.stringify(data))
+      return data as WatchHistoryEntry[]
+    } catch (err) {
+      console.warn("Offline fallback for getWatchHistory:", err)
+      const cached = localStorage.getItem(`cinevault_watch_history_${userId}`)
+      if (cached) return JSON.parse(cached) as WatchHistoryEntry[]
+      throw err
+    }
   },
 
   async getEpisodeProgress(userId: string): Promise<EpisodeProgress[]> {
-    const { data, error } = await supabase
-      .from("episode_progress")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("watch_status", "completed")
-    if (error) throw error
-    return data as EpisodeProgress[]
+    try {
+      const { data, error } = await supabase
+        .from("episode_progress")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("watch_status", "completed")
+      if (error) throw error
+      localStorage.setItem(`cinevault_episode_progress_${userId}`, JSON.stringify(data))
+      return data as EpisodeProgress[]
+    } catch (err) {
+      console.warn("Offline fallback for getEpisodeProgress:", err)
+      const cached = localStorage.getItem(`cinevault_episode_progress_${userId}`)
+      if (cached) return JSON.parse(cached) as EpisodeProgress[]
+      throw err
+    }
   },
 
   // Calculations & Selectors
+  // Calculations & Selectors
   calculateWatchStreak(watchHistory: WatchHistoryEntry[]) {
     if (!watchHistory || watchHistory.length === 0) {
-      return { currentStreak: 0, longestStreak: 0, heatmapData: {} as Record<string, number> }
+      return {
+        currentStreak: 0,
+        longestStreak: 0,
+        heatmapData: {} as Record<string, number>,
+        lastActivity: null,
+      }
     }
 
     const heatmapData: Record<string, number> = {}
-    const datesSet = new Set<string>()
-
     watchHistory.forEach((item) => {
       const dateStr = getLocalDateString(item.watch_date)
       heatmapData[dateStr] = (heatmapData[dateStr] || 0) + 1
-      datesSet.add(dateStr)
     })
 
-    const uniqueDates = Array.from(datesSet).sort()
-    if (uniqueDates.length === 0) {
-      return { currentStreak: 0, longestStreak: 0, heatmapData }
-    }
+    const daysMs = watchHistory.map((h) => {
+      const date = new Date(h.watch_date)
+      date.setHours(0, 0, 0, 0)
+      return date.getTime()
+    })
 
-    // Longest Streak calculation
-    let longestStreak = 1
-    let currentTempStreak = 1
+    const uniqueDaysMs = Array.from(new Set(daysMs))
+    uniqueDaysMs.sort((a, b) => a - b)
 
-    for (let i = 1; i < uniqueDates.length; i++) {
-      const prevDate = new Date(uniqueDates[i - 1])
-      const currDate = new Date(uniqueDates[i])
-      const diffTime = currDate.getTime() - prevDate.getTime()
-      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24))
+    let longestStreak = 0
+    if (uniqueDaysMs.length > 0) {
+      longestStreak = 1
+      let currentTempStreak = 1
+      const oneDayMs = 24 * 60 * 60 * 1000
 
-      if (diffDays === 1) {
-        currentTempStreak++
-        longestStreak = Math.max(longestStreak, currentTempStreak)
-      } else if (diffDays > 1) {
-        currentTempStreak = 1
+      for (let i = 1; i < uniqueDaysMs.length; i++) {
+        const diff = uniqueDaysMs[i] - uniqueDaysMs[i - 1]
+        const diffDays = Math.round(diff / oneDayMs)
+        if (diffDays === 1) {
+          currentTempStreak++
+          longestStreak = Math.max(longestStreak, currentTempStreak)
+        } else if (diffDays > 1) {
+          currentTempStreak = 1
+        }
       }
     }
 
-    // Current Streak calculation
-    let currentStreak = 0
-    const todayStr = getLocalDateString(new Date())
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const todayMs = today.getTime()
+
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = getLocalDateString(yesterday)
+    yesterday.setHours(0, 0, 0, 0)
+    const yesterdayMs = yesterday.getTime()
 
-    if (datesSet.has(todayStr) || datesSet.has(yesterdayStr)) {
+    const daysSet = new Set(uniqueDaysMs)
+    let currentStreak = 0
+
+    if (daysSet.has(todayMs) || daysSet.has(yesterdayMs)) {
       currentStreak = 1
-      let checkDate = new Date()
-      if (!datesSet.has(todayStr) && datesSet.has(yesterdayStr)) {
-        checkDate = yesterday
-      }
+      let checkMs = daysSet.has(todayMs) ? todayMs : yesterdayMs
+      const oneDayMs = 24 * 60 * 60 * 1000
 
       while (true) {
-        checkDate.setDate(checkDate.getDate() - 1)
-        const checkStr = getLocalDateString(checkDate)
-        if (datesSet.has(checkStr)) {
+        checkMs -= oneDayMs
+        const checkDate = new Date(checkMs)
+        checkDate.setHours(0, 0, 0, 0)
+        const normalizedCheckMs = checkDate.getTime()
+        if (daysSet.has(normalizedCheckMs)) {
           currentStreak++
         } else {
           break
@@ -111,7 +147,148 @@ export const StatisticsService = {
       }
     }
 
-    return { currentStreak, longestStreak, heatmapData }
+    const lastActivity =
+      watchHistory.length > 0 ? watchHistory[watchHistory.length - 1].watch_date : null
+
+    return { currentStreak, longestStreak, heatmapData, lastActivity }
+  },
+
+  calculateLibraryStats(libraryItems: LibraryItem[]) {
+    const movies = libraryItems.filter((i) => i.media_type === "movie").length
+    const tvShows = libraryItems.filter((i) => i.media_type === "tv").length
+    const completedMovies = libraryItems.filter(
+      (i) => i.media_type === "movie" && i.status === "completed"
+    ).length
+    const completedShows = libraryItems.filter(
+      (i) => i.media_type === "tv" && i.status === "completed"
+    ).length
+    const watching = libraryItems.filter((i) => i.status === "watching").length
+    const planning = libraryItems.filter((i) => i.status === "planning").length
+    const dropped = libraryItems.filter((i) => i.status === "dropped").length
+    const rewatches = libraryItems.reduce(
+      (sum, item) => sum + Math.max(0, (item.times_watched || 1) - 1),
+      0
+    )
+    const continueWatching = libraryItems.filter(
+      (i) => i.status === "watching" || (i.progress !== null && i.progress > 0 && i.progress < 100)
+    ).length
+    const completionRate =
+      libraryItems.length > 0
+        ? Math.round(
+            (libraryItems.filter((i) => i.status === "completed").length / libraryItems.length) *
+              100
+          )
+        : 0
+    return {
+      movies,
+      tvShows,
+      completedMovies,
+      completedShows,
+      watching,
+      planning,
+      dropped,
+      rewatches,
+      continueWatching,
+      completionRate,
+    }
+  },
+
+  calculateWatchTime(libraryItems: LibraryItem[], episodeProgress: EpisodeProgress[]) {
+    let movieMinutes = 0
+    libraryItems.forEach((item) => {
+      if (item.media_type === "movie") {
+        const runtime = item.runtime_minutes || 0
+        const completedTime = runtime * (item.times_watched || 0)
+        const partialTime = runtime * ((item.progress || 0) / 100)
+        movieMinutes += Math.max(completedTime, partialTime)
+      }
+    })
+
+    const showRuntimeMap = new Map<string, number>()
+    libraryItems.forEach((item) => {
+      if (item.media_type === "tv" && item.runtime_minutes) {
+        showRuntimeMap.set(String(item.media_id), item.runtime_minutes)
+      }
+    })
+
+    let tvMinutes = 0
+    episodeProgress.forEach((ep) => {
+      if (ep.watch_status === "completed") {
+        if (ep.runtime_minutes && ep.runtime_minutes > 0) {
+          tvMinutes += ep.runtime_minutes
+        } else {
+          tvMinutes += showRuntimeMap.get(String(ep.media_id)) || 0
+        }
+      }
+    })
+
+    const watchMinutes = movieMinutes + tvMinutes
+    const watchHours = Math.round((watchMinutes / 60) * 10) / 10
+
+    return { watchMinutes, watchHours }
+  },
+
+  calculateRatings(libraryItems: LibraryItem[]) {
+    const ratedItems = libraryItems.filter(
+      (i) => i.rating !== null && i.rating !== undefined && !isNaN(i.rating)
+    )
+    const averageRating =
+      ratedItems.length > 0
+        ? Math.round((ratedItems.reduce((sum, i) => sum + i.rating!, 0) / ratedItems.length) * 10) /
+          10
+        : 0
+    return { averageRating }
+  },
+
+  calculateGenres(
+    libraryItems: LibraryItem[],
+    episodeProgress: EpisodeProgress[]
+  ) {
+    const genreMinutes: Record<string, number> = {}
+
+    libraryItems.forEach((item) => {
+      if (item.media_type === "movie" && item.genres) {
+        const runtime = item.runtime_minutes || 0
+        const completedTime = runtime * (item.times_watched || 0)
+        const partialTime = runtime * ((item.progress || 0) / 100)
+        const watchMins = Math.max(completedTime, partialTime)
+
+        item.genres.forEach((g) => {
+          genreMinutes[g] = (genreMinutes[g] || 0) + watchMins
+        })
+      }
+    })
+
+    const showRuntimeMap = new Map<string, number>()
+    const showGenresMap = new Map<string, string[]>()
+    libraryItems.forEach((item) => {
+      if (item.media_type === "tv") {
+        if (item.runtime_minutes) showRuntimeMap.set(String(item.media_id), item.runtime_minutes)
+        if (item.genres) showGenresMap.set(String(item.media_id), item.genres)
+      }
+    })
+
+    episodeProgress.forEach((ep) => {
+      if (ep.watch_status === "completed") {
+        const runtime =
+          ep.runtime_minutes && ep.runtime_minutes > 0
+            ? ep.runtime_minutes
+            : showRuntimeMap.get(String(ep.media_id)) || 0
+
+        const genres = showGenresMap.get(String(ep.media_id)) || []
+        genres.forEach((g) => {
+          genreMinutes[g] = (genreMinutes[g] || 0) + runtime
+        })
+      }
+    })
+
+    const sortedGenres = Object.entries(genreMinutes).sort((a, b) => b[1] - a[1])
+    const topGenre = sortedGenres[0]?.[0] || "None"
+
+    return {
+      favoriteGenre: topGenre,
+      mostWatchedGenre: topGenre,
+    }
   },
 
   calculateOverview(
@@ -119,34 +296,40 @@ export const StatisticsService = {
     watchHistory: WatchHistoryEntry[],
     episodeProgress: EpisodeProgress[]
   ): OverviewData {
-    const totalWatchTime = watchHistory.reduce((sum, item) => sum + (item.runtime_minutes || 0), 0)
-    const moviesCompleted = libraryItems.filter(
-      (i) => i.media_type === "movie" && i.status === "completed"
-    ).length
-    const episodesCompleted = episodeProgress.length
-    const tvShowsCompleted = libraryItems.filter(
-      (i) => i.media_type === "tv" && i.status === "completed"
-    ).length
-
-    const continueWatchingCount = libraryItems.filter(
-      (i) => i.status === "watching" || (i.progress !== null && i.progress > 0 && i.progress < 100)
-    ).length
-
-    const completedCount = libraryItems.filter((i) => i.status === "completed").length
-    const totalCount = libraryItems.length
-    const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
-
-    const { currentStreak, longestStreak } = this.calculateWatchStreak(watchHistory)
+    const libStats = this.calculateLibraryStats(libraryItems)
+    const timeStats = this.calculateWatchTime(libraryItems, episodeProgress)
+    const streakStats = this.calculateWatchStreak(watchHistory)
+    const ratingStats = this.calculateRatings(libraryItems)
+    const genreStats = this.calculateGenres(libraryItems, episodeProgress)
 
     return {
-      totalWatchTime,
-      moviesCompleted,
-      episodesCompleted,
-      tvShowsCompleted,
-      continueWatchingCount,
-      currentStreak,
-      longestStreak,
-      completionRate,
+      // Legacy compatibility
+      totalWatchTime: timeStats.watchMinutes,
+      moviesCompleted: libStats.completedMovies,
+      episodesCompleted: episodeProgress.filter((ep) => ep.watch_status === "completed").length,
+      tvShowsCompleted: libStats.completedShows,
+      continueWatchingCount: libStats.continueWatching,
+      currentStreak: streakStats.currentStreak,
+      longestStreak: streakStats.longestStreak,
+      completionRate: libStats.completionRate,
+
+      // New properties
+      movies: libStats.movies,
+      tvShows: libStats.tvShows,
+      episodes: episodeProgress.filter((ep) => ep.watch_status === "completed").length,
+      watchMinutes: timeStats.watchMinutes,
+      watchHours: timeStats.watchHours,
+      completedMovies: libStats.completedMovies,
+      completedShows: libStats.completedShows,
+      watching: libStats.watching,
+      planning: libStats.planning,
+      dropped: libStats.dropped,
+      rewatches: libStats.rewatches,
+      averageRating: ratingStats.averageRating,
+      favoriteGenre: genreStats.favoriteGenre,
+      mostWatchedGenre: genreStats.mostWatchedGenre,
+      lastActivity: streakStats.lastActivity,
+      continueWatching: libStats.continueWatching,
     }
   },
 

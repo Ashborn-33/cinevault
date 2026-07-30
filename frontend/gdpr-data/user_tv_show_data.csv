@@ -1,0 +1,220 @@
+user_id,tv_show_id,is_followed,is_favorited,nb_episodes_seen,tv_show_name
+75184478,73739,1,0,88,Lost
+75184478,73752,1,0,25,Berserk
+75184478,74796,1,0,129,Bleach
+75184478,75340,1,0,0,Prison Break
+75184478,76666,1,0,20,Dragon Ball
+75184478,76703,1,0,289,Pokémon
+75184478,78804,1,0,19,Doctor Who (2005)
+75184478,78857,1,0,124,Naruto
+75184478,79168,1,0,0,Friends
+75184478,79237,1,0,10,Baki the Grappler
+75184478,79481,1,0,37,Death Note
+75184478,79525,1,0,50,Code Geass: Lelouch of the Rebellion
+75184478,79685,1,0,128,Fighting Spirit
+75184478,79824,1,0,0,Naruto Shippuden
+75184478,81472,1,0,122,Dragon Ball Z
+75184478,81797,1,0,161,One Piece
+75184478,82234,1,0,0,Ghost Stories
+75184478,83929,1,0,0,Ghost Adventures
+75184478,85249,1,0,17,Fullmetal Alchemist: Brotherhood
+75184478,85329,1,0,79,Dinosaur King
+75184478,114801,1,0,91,Fairy Tail
+75184478,117801,1,0,0,Kimi ni Todoke: From Me to You
+75184478,121361,1,0,71,Game of Thrones
+75184478,124051,1,0,0,Misfits
+75184478,171591,1,0,12,High School of the Dead
+75184478,176941,1,0,1,Sherlock
+75184478,219701,1,0,22,Freezing
+75184478,244061,1,0,24,Steins;Gate
+75184478,248741,1,0,0,2 Broke Girls
+75184478,249827,1,0,15,The Future Diary
+75184478,252322,1,0,58,Hunter x Hunter (2011)
+75184478,253463,1,0,1,Black Mirror
+75184478,254349,1,0,12,Another
+75184478,254653,1,0,48,High School D×D
+75184478,257655,1,0,0,Arrow
+75184478,257765,1,0,73,Kuroko's Basketball
+75184478,257980,1,0,0,Sarabhai vs Sarabhai
+75184478,259640,1,0,96,Sword Art Online
+75184478,260449,1,0,0,Vikings
+75184478,261862,1,0,12,"Love, Chunibyo & Other Delusions!"
+75184478,262954,1,0,0,JoJo's Bizarre Adventure (2012)
+75184478,264663,1,0,16,Date A Live
+75184478,266883,1,0,0,The Originals
+75184478,267440,1,0,51,Attack on Titan
+75184478,268592,1,0,0,The 100
+75184478,270065,1,0,0,Free!
+75184478,270915,1,0,0,Peaky Blinders
+75184478,274431,1,0,0,Gotham
+75184478,275583,1,0,10,Tonari no Seki-kun: The Master of Killing Time
+75184478,275610,1,0,25,Noragami
+75184478,276721,1,0,0,Aahat
+75184478,278155,1,0,12,No Game No Life
+75184478,278157,1,0,85,Haikyu!!
+75184478,279121,1,0,23,The Flash (2014)
+75184478,279830,1,0,22,Your Lie in April
+75184478,279831,1,0,24,Parasyte -the maxim-
+75184478,280329,1,0,24,Akame ga Kill!
+75184478,281249,1,0,26,Tokyo Ghoul
+75184478,282866,0,0,0,Saath Nibhaana Saathiya
+75184478,283935,1,0,3,Trinity Seven
+75184478,283947,1,0,0,Assassination Classroom
+75184478,284131,1,0,26,The Seven Deadly Sins
+75184478,289882,1,0,32,Is It Wrong to Try to Pick Up Girls in a Dungeon?
+75184478,289909,1,0,86,Food Wars!
+75184478,291630,1,0,0,The Heroic Legend of Arslan (2015)
+75184478,293088,1,0,29,One-Punch Man
+75184478,293267,1,0,12,Prison School
+75184478,294002,1,0,13,Overlord
+75184478,295068,1,0,0,Dragon Ball Super
+75184478,295685,1,0,67,Lucifer
+75184478,303867,1,0,10,KonoSuba – God’s blessing on this wonderful world!!
+75184478,305074,1,0,166,My Hero Academia
+75184478,305075,1,0,6,Bungo Stray Dogs
+75184478,305089,1,0,77,"Re: ZERO, Starting Life in Another World"
+75184478,305288,1,0,42,Stranger Things
+75184478,307111,1,0,0,Berserk (2016)
+75184478,321285,1,0,293,Boruto: Naruto Next Generations
+75184478,323168,1,0,0,13 Reasons Why
+75184478,326634,1,0,52,Idaten Jump
+75184478,327417,1,0,13,Money Heist
+75184478,329822,1,0,25,Classroom of the Elite
+75184478,330092,0,0,0,Youkoso Jitsuryoku Shijou Shugi no Kyoushitsu e
+75184478,330139,1,0,13,Violet Evergarden
+75184478,331753,1,0,170,Black Clover
+75184478,334824,1,0,25,Dark
+75184478,335179,0,0,0,One Pace
+75184478,335815,1,0,24,Sword Art Online Alternative: Gun Gale Online
+75184478,339076,1,0,155,Beyblade Burst
+75184478,342635,1,0,14,Flames
+75184478,343253,1,0,0,Lost in Space (2018)
+75184478,345596,1,0,13,Rascal Does Not Dream of Bunny Girl Senpai
+75184478,348002,1,0,0,The Promised Neverland
+75184478,348545,1,0,61,Demon Slayer: Kimetsu no Yaiba
+75184478,348742,1,0,36,Baki (2018)
+75184478,352408,1,0,71,That Time I Got Reincarnated as a Slime
+75184478,353712,1,0,62,The Rising of the Shield Hero
+75184478,354017,0,0,0,The Seven Deadly Sins (Nanatsu no Taizai)
+75184478,354167,1,0,24,Dororo (2019)
+75184478,354198,1,0,12,Kaguya-sama: Love Is War
+75184478,354808,1,0,10,Mirzapur
+75184478,355480,1,0,26,Fire Force
+75184478,355567,1,0,27,The Boys
+75184478,355730,1,0,0,The Wheel of Time
+75184478,355774,1,0,94,Dr. STONE
+75184478,355966,1,0,24,The Quintessential Quintuplets
+75184478,356317,1,0,0,Sex Education
+75184478,357888,1,0,35,"Love, Death & Robots"
+75184478,359274,1,0,24,Vinland Saga
+75184478,360115,1,0,0,Prison Break
+75184478,360486,0,0,0,Despicable Me
+75184478,360534,0,0,8,Sword Art Online: Alicization
+75184478,361701,1,0,0,Ghosts (2019)
+75184478,362472,1,0,12,Loki
+75184478,362631,1,0,9,Kota Factory
+75184478,362696,1,0,8,The Witcher
+75184478,367147,1,0,2,What If…?
+75184478,368120,1,0,0,Amazing Stories (2020)
+75184478,368185,1,0,0,Fate: The Winx Saga
+75184478,368207,0,0,0,INVINCIBLE (2021)
+75184478,369026,1,0,4,Uzumaki
+75184478,369144,1,0,67,Welcome to Demon School! Iruma-kun
+75184478,371028,1,0,9,Arcane
+75184478,371097,1,0,0,Assault Lily: BOUQUET
+75184478,371310,1,0,43,Mushoku Tensei: Jobless Reincarnation
+75184478,371572,1,0,0,House of the Dragon
+75184478,375271,1,0,0,To Your Eternity
+75184478,376472,1,0,22,Alice in Borderland (2020)
+75184478,376729,1,0,19,Tower of God
+75184478,376751,1,0,15,The Daily Life of the Immortal King
+75184478,377543,1,0,59,JUJUTSU KAISEN
+75184478,378231,1,0,16,Asur
+75184478,378609,1,0,23,86: Eighty Six
+75184478,380654,1,0,26,Rent-a-Girlfriend
+75184478,382142,1,0,12,All of Us Are Dead
+75184478,382544,1,0,0,Warrior Nun
+75184478,383275,1,0,22,Squid Game
+75184478,384541,1,0,2,Cyberpunk: Edgerunners
+75184478,385278,1,0,0,"Don't Toy With Me, Miss Nagatoro"
+75184478,385496,1,0,22,Mismatched
+75184478,388593,1,0,13,Horimiya
+75184478,388737,1,0,12,Bottom-tier Character Tomozaki
+75184478,388858,1,0,12,SK8 the Infinity
+75184478,389597,1,0,24,Solo Leveling
+75184478,391625,1,0,0,Ranking of Kings
+75184478,392276,1,0,16,ONE PIECE (2023)
+75184478,393478,1,0,50,Tokyo Revengers
+75184478,393810,1,0,44,Record of Ragnarok
+75184478,396983,1,0,8,DOTA: Dragon's Blood
+75184478,397060,1,0,16,Wednesday
+75184478,397934,1,0,12,Chainsaw Man
+75184478,399902,1,0,24,Platinum End
+75184478,401003,1,0,0,FROM
+75184478,401233,1,0,12,My Dress-Up Darling
+75184478,402412,1,0,24,Komi Can't Communicate
+75184478,402474,1,0,25,Hell's Paradise
+75184478,402475,1,0,24,Orient
+75184478,402637,1,0,12,My Isekai Life: I Gained a Second Character Class and Became the Strongest Sage in the World!
+75184478,403262,1,0,16,Sunflower
+75184478,404568,1,0,9,Indori Ishq
+75184478,405920,1,0,25,SPY x FAMILY
+75184478,406152,1,0,0,Baki Hanma
+75184478,407306,1,0,25,Summer Time Rendering
+75184478,407520,1,0,32,The Eminence in Shadow
+75184478,407840,1,0,24,Aoashi
+75184478,408629,1,0,38,BLUE LOCK
+75184478,410031,1,0,0,Fairy Tail 100 Years Quest
+75184478,412031,1,0,12,Tomodachi Game
+75184478,412427,1,0,0,Your Friendly Neighborhood Spider-Man
+75184478,412826,1,0,0,Trapped in a Dating Sim: The World of Otome Games Is Tough for Mobs
+75184478,414057,1,0,13,Lycoris Recoil
+75184478,414947,1,0,2,Gods' Games We Play
+75184478,416705,1,0,24,Crushed
+75184478,416998,1,0,12,NieR:Automata Ver1.1a
+75184478,417147,1,0,5,Spice and Wolf: MERCHANT MEETS THE WISE WOLF
+75184478,418367,1,0,20,Farming Life in Another World
+75184478,418666,1,0,13,Witch Hat Atelier
+75184478,420657,1,0,12,KonoSuba: An Explosion on This Wonderful World!
+75184478,421069,1,0,13,Oshi no Ko
+75184478,421737,1,0,12,MASHLE: MAGIC AND MUSCLES
+75184478,421855,1,0,50,Shangri-La Frontier
+75184478,422090,1,0,1,Dark Gathering
+75184478,422598,1,0,0,Monarch: Legacy of Monsters
+75184478,423030,1,0,0,Undead Unluck
+75184478,423075,1,0,23,Kaiju No. 8
+75184478,423257,1,0,12,Delicious in Dungeon
+75184478,423732,1,0,22,SAKAMOTO DAYS
+75184478,424536,1,0,25,Frieren: Beyond Journey's End
+75184478,425276,0,0,0,Re:ZERO ~Starting Break Time From Zero~
+75184478,426572,1,0,24,Campfire Cooking in Another World with My Absurd Skill
+75184478,429310,1,0,9,Zom 100: Bucket List of the Dead
+75184478,429634,1,0,10,The Girl I Like Forgot Her Glasses
+75184478,429934,1,0,25,Blue Box
+75184478,431162,1,0,48,The Apothecary Diaries
+75184478,432832,1,0,24,DAN DA DAN
+75184478,433375,1,0,7,Gutar Gu
+75184478,433631,1,0,6,A Knight of the Seven Kingdoms
+75184478,436124,1,0,13,Horimiya: The Missing Pieces
+75184478,436779,1,0,0,Fate/strange Fake
+75184478,437266,1,0,8,Sentenced to Be a Hero
+75184478,437541,1,0,5,Half CA
+75184478,440897,1,0,12,Chillin' in Another World With Level 2 Super Cheat Powers
+75184478,443377,1,0,9,Makeine: Too Many Losing Heroines!
+75184478,443412,1,0,20,Dehati Ladke
+75184478,445829,1,0,0,Wistoria: Wand and Sword
+75184478,446692,1,0,1,"Anyway, I'm Falling in Love with You."
+75184478,447889,1,0,10,Very Parivarik
+75184478,448176,1,0,0,The Pitt
+75184478,449941,1,0,0,Tujhpe Main Fida
+75184478,450537,1,0,24,Gachiakuta
+75184478,454524,1,0,13,The Fragrant Flower Blooms with Dignity
+75184478,454699,1,0,5,Ishq In The Air
+75184478,455086,1,0,5,Off Campus
+75184478,455684,1,0,12,The Beginning After the End
+75184478,457645,1,0,6,Takopi's Original Sin
+75184478,459339,1,0,0,Kunon the Sorcerer Can See
+75184478,459453,1,0,24,To Be Hero X
+75184478,464419,1,0,1,Lord of Mysteries
+75184478,465973,1,0,0,Smoking Behind the Supermarket with You
+75184478,471423,1,0,8,Bhay: The Gaurav Tiwari Mystery

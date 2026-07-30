@@ -4,6 +4,18 @@
 @import "@fontsource-variable/inter";
 @import "./styles/theme/index.css";
 
+:root {
+  --navbar-height: 0px;
+  --mobile-nav-height: 56px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --navbar-height: 76px;
+    --mobile-nav-height: 0px;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @layer base {

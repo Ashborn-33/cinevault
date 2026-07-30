@@ -1,12 +1,17 @@
 import { Outlet, useLocation } from "react-router-dom"
 import { Navbar } from "@/components/navigation/Navbar"
+import { usePWA, OfflineBanner, UpdatePrompt } from "@/features/pwa"
+import { cn } from "@/lib/utils"
 
 export function RootLayout() {
   const location = useLocation()
   const isDevShowcase = location.pathname.startsWith("/dev/")
+  const { isOnline, needRefresh, update, dismissUpdate } = usePWA()
 
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased transition-colors duration-300 pb-14 md:pb-0">
+    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased transition-colors duration-300">
+      <OfflineBanner isOnline={isOnline} />
+      <UpdatePrompt needRefresh={needRefresh} onUpdate={update} onDismiss={dismissUpdate} />
       {/* Conditionally render public Navbar vs Dev Header */}
       {!isDevShowcase ? (
         <Navbar />
@@ -22,7 +27,17 @@ export function RootLayout() {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-grow">
+      <main
+        className={cn("flex-grow", isDevShowcase ? "pb-14 md:pb-0" : "")}
+        style={
+          !isDevShowcase
+            ? {
+                paddingTop: "var(--navbar-height)",
+                paddingBottom: "var(--mobile-nav-height)",
+              }
+            : undefined
+        }
+      >
         <Outlet />
       </main>
 

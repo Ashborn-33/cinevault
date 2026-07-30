@@ -30,7 +30,7 @@ export function Login() {
   const location = useLocation()
   const [authError, setAuthError] = useState<string | null>(null)
 
-  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || "/dashboard"
+  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || "/home"
 
   const {
     register,
