@@ -4,15 +4,32 @@ import type { LibraryItem, AddLibraryItemInput, LibraryStatus } from "../types/l
 export const LibraryService = {
   async getLibrary(userId: string): Promise<LibraryItem[]> {
     try {
-      const { data, error } = await supabase
-        .from("library")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false })
+      let allData: LibraryItem[] = []
+      let from = 0
+      const limit = 1000
+      let hasMore = true
 
-      if (error) throw error
-      localStorage.setItem(`cinevault_library_${userId}`, JSON.stringify(data))
-      return data as LibraryItem[]
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("library")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false })
+          .range(from, from + limit - 1)
+        if (error) throw error
+        if (!data || data.length === 0) {
+          hasMore = false
+        } else {
+          allData = [...allData, ...data]
+          from += limit
+          if (data.length < limit) {
+            hasMore = false
+          }
+        }
+      }
+
+      localStorage.setItem(`cinevault_library_${userId}`, JSON.stringify(allData))
+      return allData as LibraryItem[]
     } catch (err) {
       console.warn("Offline fallback triggered for getLibrary:", err)
       const cached = localStorage.getItem(`cinevault_library_${userId}`)

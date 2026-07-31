@@ -1056,11 +1056,28 @@ export const TVTimeProvider: ImportProvider = {
     const tmdbToLibraryIdMap = new Map<string, string>()
 
     // Load initial user library records to populate the map
-    const { data: initialLib } = await supabase
-      .from("library")
-      .select("id, media_id, media_type")
-      .eq("user_id", activeUserId)
-    initialLib?.forEach((row) => {
+    let initialLib: any[] = []
+    let fromLib = 0
+    let hasMoreLib = true
+    while (hasMoreLib) {
+      const { data: pageData, error: libErr } = await supabase
+        .from("library")
+        .select("id, media_id, media_type")
+        .eq("user_id", activeUserId)
+        .range(fromLib, fromLib + 999)
+      if (libErr) throw libErr
+      if (!pageData || pageData.length === 0) {
+        hasMoreLib = false
+      } else {
+        initialLib = [...initialLib, ...pageData]
+        fromLib += 1000
+        if (pageData.length < 1000) {
+          hasMoreLib = false
+        }
+      }
+    }
+
+    initialLib.forEach((row) => {
       tmdbToLibraryIdMap.set(`${row.media_type}_${row.media_id}`, row.id)
     })
 
@@ -1071,7 +1088,27 @@ export const TVTimeProvider: ImportProvider = {
 
     if (options.importLibrary && data.libraryItems.length > 0) {
       onProgress?.("Importing library statuses...", 25)
-      const { data: dbLib } = await supabase.from("library").select("*").eq("user_id", activeUserId)
+      
+      let dbLib: any[] = []
+      let fromDbLib = 0
+      let hasMoreDbLib = true
+      while (hasMoreDbLib) {
+        const { data: pageData, error: dbLibErr } = await supabase
+          .from("library")
+          .select("*")
+          .eq("user_id", activeUserId)
+          .range(fromDbLib, fromDbLib + 999)
+        if (dbLibErr) throw dbLibErr
+        if (!pageData || pageData.length === 0) {
+          hasMoreDbLib = false
+        } else {
+          dbLib = [...dbLib, ...pageData]
+          fromDbLib += 1000
+          if (pageData.length < 1000) {
+            hasMoreDbLib = false
+          }
+        }
+      }
       const libMap = new Map((dbLib || []).map((i) => [`${i.media_type}_${i.media_id}`, i]))
 
       const chunks = chunkArray(data.libraryItems, 50)
@@ -1379,10 +1416,26 @@ export const TVTimeProvider: ImportProvider = {
     // 3. Episode progress import (Merge: skip if exists, else insert)
     if (options.importProgress && data.episodeProgress.length > 0) {
       onProgress?.("Importing episode watched records...", 50)
-      const { data: dbEp } = await supabase
-        .from("episode_progress")
-        .select("*")
-        .eq("user_id", activeUserId)
+      let dbEp: any[] = []
+      let fromDbEp = 0
+      let hasMoreDbEp = true
+      while (hasMoreDbEp) {
+        const { data: pageData, error: dbEpErr } = await supabase
+          .from("episode_progress")
+          .select("*")
+          .eq("user_id", activeUserId)
+          .range(fromDbEp, fromDbEp + 999)
+        if (dbEpErr) throw dbEpErr
+        if (!pageData || pageData.length === 0) {
+          hasMoreDbEp = false
+        } else {
+          dbEp = [...dbEp, ...pageData]
+          fromDbEp += 1000
+          if (pageData.length < 1000) {
+            hasMoreDbEp = false
+          }
+        }
+      }
       const epSet = new Set(
         (dbEp || []).map((i) => `${i.media_id}_${i.season_number}_${i.episode_number}`)
       )
@@ -1538,10 +1591,26 @@ export const TVTimeProvider: ImportProvider = {
     // 4. Watch history import (Skip duplicates)
     if (options.importWatchHistory && data.watchHistory.length > 0) {
       onProgress?.("Importing tracking history timeline...", 75)
-      const { data: dbHistory } = await supabase
-        .from("watch_history")
-        .select("media_id, media_type, watch_date")
-        .eq("user_id", activeUserId)
+      let dbHistory: any[] = []
+      let fromDbHistory = 0
+      let hasMoreDbHistory = true
+      while (hasMoreDbHistory) {
+        const { data: pageData, error: dbHistoryErr } = await supabase
+          .from("watch_history")
+          .select("media_id, media_type, watch_date")
+          .eq("user_id", activeUserId)
+          .range(fromDbHistory, fromDbHistory + 999)
+        if (dbHistoryErr) throw dbHistoryErr
+        if (!pageData || pageData.length === 0) {
+          hasMoreDbHistory = false
+        } else {
+          dbHistory = [...dbHistory, ...pageData]
+          fromDbHistory += 1000
+          if (pageData.length < 1000) {
+            hasMoreDbHistory = false
+          }
+        }
+      }
       const historySet = new Set(
         (dbHistory || []).map((i) => `${i.media_type}_${i.media_id}_${i.watch_date}`)
       )

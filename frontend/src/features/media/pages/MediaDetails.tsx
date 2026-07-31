@@ -120,6 +120,12 @@ export function MediaDetails({ type }: MediaDetailsProps) {
     !isMovie && tvDetails.data ? (tvDetails.data as TVDetails).number_of_episodes : 0
   )
 
+  if (showProgress) {
+    console.log("[STAGE 6 DEBUG] MediaDetails Overall Progress: watched =", showProgress.watched, "percentage =", showProgress.percentage)
+  }
+
+  const [activeMenuEpisode, setActiveMenuEpisode] = React.useState<number | null>(null)
+
   const inLibrary = !!libraryItem
   const status = libraryItem?.status || "planning"
   const favorite = libraryItem?.favorite || false
@@ -372,6 +378,35 @@ export function MediaDetails({ type }: MediaDetailsProps) {
     }
   }
 
+  const getAirDateLabel = (airDateStr: string | null) => {
+    if (!airDateStr) return "TBA"
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const airDate = new Date(airDateStr + "T00:00:00")
+    const diffTime = airDate.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 0) {
+      return "Airs Today"
+    } else if (diffDays === 1) {
+      return "Airs Tomorrow"
+    } else if (diffDays > 1 && diffDays <= 30) {
+      return `Airs in ${diffDays} days`
+    } else if (diffDays > 30) {
+      return `Airs ${new Date(airDateStr + "T00:00:00").toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })}`
+    } else {
+      return new Date(airDateStr + "T00:00:00").toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    }
+  }
+
   const getEpisodeWatchCount = (episodeNumber: number) => {
     const ep = episodeProgress.find(
       (e) => e.episode_number === episodeNumber && e.watch_status === "completed"
@@ -398,6 +433,92 @@ export function MediaDetails({ type }: MediaDetailsProps) {
       })
     } catch (err) {
       console.error("Episode status toggle failed", err)
+    }
+  }
+
+  const handleMarkNotWatched = async (
+    episode: import("@/features/media/types/media").TVEpisode
+  ) => {
+    setActiveMenuEpisode(null)
+    try {
+      await markEpisodeMutation.mutateAsync({
+        mediaId: Number(mediaId),
+        season: selectedSeason,
+        episode: episode.episode_number,
+        name: episode.name,
+        stillPath: episode.still_path,
+        airDate: episode.air_date,
+        runtime: episode.runtime || null,
+        totalShowEpisodes: (details as TVDetails).number_of_episodes || 0,
+        totalSeasonEpisodes: seasonDetails?.episodes?.length || 0,
+        title,
+        poster: details.poster_path,
+        watched: false,
+        expectedUpdatedAt: libraryItem?.updated_at || null,
+      })
+    } catch (err) {
+      console.error("Failed to mark unwatched", err)
+    }
+  }
+
+  const handleWatchAgain = async (episode: import("@/features/media/types/media").TVEpisode) => {
+    setActiveMenuEpisode(null)
+    try {
+      await markEpisodeMutation.mutateAsync({
+        mediaId: Number(mediaId),
+        season: selectedSeason,
+        episode: episode.episode_number,
+        name: episode.name,
+        stillPath: episode.still_path,
+        airDate: episode.air_date,
+        runtime: episode.runtime || null,
+        totalShowEpisodes: (details as TVDetails).number_of_episodes || 0,
+        totalSeasonEpisodes: seasonDetails?.episodes?.length || 0,
+        title,
+        poster: details.poster_path,
+        watched: true,
+        expectedUpdatedAt: libraryItem?.updated_at || null,
+      })
+    } catch (err) {
+      console.error("Failed to watch again", err)
+    }
+  }
+
+  const handlePromptEditCount = async (
+    episode: import("@/features/media/types/media").TVEpisode,
+    currentCount: number
+  ) => {
+    setActiveMenuEpisode(null)
+    const promptVal = prompt(
+      `Enter watch count for S${selectedSeason}E${episode.episode_number} (minimum 0):`,
+      String(currentCount)
+    )
+    if (promptVal === null) return
+    const newCount = parseInt(promptVal, 10)
+    if (isNaN(newCount) || newCount < 0) {
+      alert("Please enter a valid number (0 or greater).")
+      return
+    }
+
+    try {
+      await markEpisodeMutation.mutateAsync({
+        mediaId: Number(mediaId),
+        season: selectedSeason,
+        episode: episode.episode_number,
+        name: episode.name,
+        stillPath: episode.still_path,
+        airDate: episode.air_date,
+        runtime: episode.runtime || null,
+        totalShowEpisodes: (details as TVDetails).number_of_episodes || 0,
+        totalSeasonEpisodes: seasonDetails?.episodes?.length || 0,
+        title,
+        poster: details.poster_path,
+        watched: newCount > 0,
+        watchCount: newCount,
+        expectedUpdatedAt: libraryItem?.updated_at || null,
+      })
+    } catch (err) {
+      console.error("Failed to update watch count", err)
     }
   }
 
@@ -804,13 +925,10 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                       const stillUrl = episode.still_path
                         ? tmdbClient.getImageUrl(episode.still_path)
                         : undefined
-                      const airDateFormatted = episode.air_date
-                        ? new Date(episode.air_date).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })
-                        : "TBA"
+                      const isUpcoming = episode.air_date
+                        ? new Date(episode.air_date + "T00:00:00").getTime() >
+                          new Date().setHours(0, 0, 0, 0)
+                        : false
 
                       return (
                         <div
@@ -841,36 +959,103 @@ export function MediaDetails({ type }: MediaDetailsProps) {
                                   {episode.name || `Episode ${episode.episode_number}`}
                                 </h4>
                                 <p className="text-[10px] text-muted-foreground font-semibold">
-                                  {airDateFormatted}{" "}
+                                  {getAirDateLabel(episode.air_date)}{" "}
                                   {episode.runtime ? `• ${episode.runtime}m` : ""}
                                 </p>
                               </div>
 
-                              {/* Watch Checkbox Toggle */}
-                              <button
-                                type="button"
-                                onClick={() => handleToggleEpisode(episode)}
-                                disabled={markEpisodeMutation.isPending}
-                                aria-label={
-                                  watchedCount > 0
-                                    ? "Watch again"
-                                    : `Mark episode ${episode.episode_number} as watched`
-                                }
-                                className={`h-6 px-3 rounded-full border text-[10px] font-extrabold cursor-pointer transition-all flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none ${
-                                  watchedCount > 0
-                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
-                                    : "bg-surface border-border text-muted-foreground hover:text-foreground"
-                                }`}
-                              >
-                                <span
-                                  className={`h-2 w-2 rounded-full ${watchedCount > 0 ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`}
-                                />
-                                {watchedCount > 1
-                                  ? `Watched ×${watchedCount}`
-                                  : watchedCount === 1
-                                    ? "Watched"
-                                    : "Watch"}
-                              </button>
+                              {isUpcoming ? (
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="h-6 px-3 rounded-full border border-border/80 bg-zinc-900/50 text-muted-foreground text-[10px] font-extrabold cursor-not-allowed select-none"
+                                >
+                                  Coming Soon
+                                </button>
+                              ) : (
+                                /* Watch Checkbox Toggle & Dropdown Menu */
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      if (watchedCount > 0) {
+                                        setActiveMenuEpisode(
+                                          activeMenuEpisode === episode.episode_number
+                                            ? null
+                                            : episode.episode_number
+                                        )
+                                      } else {
+                                        handleToggleEpisode(episode)
+                                      }
+                                    }}
+                                    disabled={markEpisodeMutation.isPending}
+                                    aria-label={
+                                      watchedCount > 0
+                                        ? "Manage watch states"
+                                        : `Mark episode ${episode.episode_number} as watched`
+                                    }
+                                    className={`h-6 px-3 rounded-full border text-[10px] font-extrabold cursor-pointer transition-all flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring select-none ${
+                                      watchedCount > 0
+                                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                                        : "bg-surface border-border text-muted-foreground hover:text-foreground"
+                                    }`}
+                                  >
+                                    <span
+                                      className={`h-2 w-2 rounded-full ${watchedCount > 0 ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"}`}
+                                    />
+                                    {watchedCount > 1
+                                      ? `Watched ×${watchedCount}`
+                                      : watchedCount === 1
+                                        ? "Watched"
+                                        : "Watch"}
+                                  </button>
+
+                                  {activeMenuEpisode === episode.episode_number && (
+                                    <>
+                                      <div
+                                        className="fixed inset-0 z-40 cursor-default"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          setActiveMenuEpisode(null)
+                                        }}
+                                      />
+                                      <div className="absolute right-0 mt-1.5 w-40 rounded-card border border-border bg-surface/95 backdrop-blur-md p-1 shadow-lg z-50 animate-in fade-in slide-in-from-top-1 duration-150">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleMarkNotWatched(episode)
+                                          }}
+                                          className="w-full text-left px-3 py-1.5 text-[10px] font-bold text-rose-400 hover:bg-rose-500/10 rounded-button transition-colors flex items-center gap-1.5"
+                                        >
+                                          Mark as Not Watched
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleWatchAgain(episode)
+                                          }}
+                                          className="w-full text-left px-3 py-1.5 text-[10px] font-bold text-emerald-400 hover:bg-emerald-500/10 rounded-button transition-colors flex items-center gap-1.5"
+                                        >
+                                          Watch Again (+1)
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handlePromptEditCount(episode, watchedCount)
+                                          }}
+                                          className="w-full text-left px-3 py-1.5 text-[10px] font-bold text-primary hover:bg-primary/10 rounded-button transition-colors flex items-center gap-1.5"
+                                        >
+                                          Edit Watch Count
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )}
                             </div>
 
                             <p className="text-[10px] text-muted-foreground line-clamp-2">

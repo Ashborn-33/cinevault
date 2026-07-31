@@ -252,6 +252,234 @@ export const TrackingService = {
     if (insertHistErr) throw insertHistErr
   },
 
+  async updateEpisodeWatchCount(
+    userId: string,
+    mediaId: number,
+    season: number,
+    episode: number,
+    newCount: number,
+    name: string | null,
+    stillPath: string | null,
+    airDate: string | null,
+    runtime: number | null,
+    totalShowEpisodes: number,
+    title: string,
+    poster: string | null,
+    expectedUpdatedAt: string | null
+  ): Promise<void> {
+    // 1. Get or create library item
+    let { data: libraryItem } = await supabase
+      .from("library")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("media_id", String(mediaId))
+      .eq("media_type", "tv")
+      .maybeSingle()
+
+    if (!libraryItem) {
+      if (newCount === 0) return
+      const { data: insertedLib, error: insertLibErr } = await supabase
+        .from("library")
+        .insert({
+          user_id: userId,
+          media_id: String(mediaId),
+          media_type: "tv",
+          title,
+          poster_path: poster,
+          status: "watching",
+          progress: 0,
+          times_watched: 0,
+          started_at: new Date().toISOString(),
+          last_watched_at: new Date().toISOString(),
+          updated_progress_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single()
+
+      if (insertLibErr) throw insertLibErr
+      libraryItem = insertedLib
+    }
+
+    if (libraryItem && expectedUpdatedAt && libraryItem.updated_at) {
+      if (
+        Math.abs(
+          new Date(libraryItem.updated_at).getTime() - new Date(expectedUpdatedAt).getTime()
+        ) > 1000
+      ) {
+        throw new Error("CONCURRENCY_ERROR: The TV progress was updated elsewhere. Please refresh.")
+      }
+    }
+
+    // 2. Query the existing episode progress row
+    const { data: epRow } = await supabase
+      .from("episode_progress")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("media_id", mediaId)
+      .eq("season_number", season)
+      .eq("episode_number", episode)
+      .maybeSingle()
+
+    // 3. Update or Insert episode progress row
+    if (newCount === 0) {
+      if (epRow) {
+        const { error: epError } = await supabase
+          .from("episode_progress")
+          .update({
+            watch_status: "unwatched",
+            watch_count: 0,
+            watched_at: null,
+            last_watched_at: null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", epRow.id)
+        if (epError) throw epError
+      }
+    } else {
+      if (epRow) {
+        const firstWatched = epRow.first_watched_at || epRow.watched_at || new Date().toISOString()
+        const { error: epError } = await supabase
+          .from("episode_progress")
+          .update({
+            watch_status: "completed",
+            watch_count: newCount,
+            first_watched_at: firstWatched,
+            last_watched_at: new Date().toISOString(),
+            watched_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", epRow.id)
+        if (epError) throw epError
+      } else {
+        const { error: epError } = await supabase.from("episode_progress").insert({
+          user_id: userId,
+          library_id: libraryItem.id,
+          media_id: mediaId,
+          season_number: season,
+          episode_number: episode,
+          episode_name: name,
+          still_path: stillPath,
+          air_date: airDate,
+          runtime_minutes: runtime || 0,
+          watch_status: "completed",
+          watch_count: newCount,
+          first_watched_at: new Date().toISOString(),
+          last_watched_at: new Date().toISOString(),
+          watched_at: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        if (epError) throw epError
+      }
+    }
+
+    // 4. Reconcile watch history records
+    const { data: historyList } = await supabase
+      .from("watch_history")
+      .select("id, watch_date")
+      .eq("user_id", userId)
+      .eq("media_id", mediaId)
+      .eq("season_number", season)
+      .eq("episode_number", episode)
+      .order("watch_date", { ascending: false })
+
+    const existingCount = historyList?.length || 0
+
+    if (newCount === 0) {
+      if (existingCount > 0) {
+        const { error: delError } = await supabase
+          .from("watch_history")
+          .delete()
+          .eq("user_id", userId)
+          .eq("media_id", mediaId)
+          .eq("season_number", season)
+          .eq("episode_number", episode)
+        if (delError) throw delError
+      }
+    } else if (existingCount < newCount) {
+      const inserts = Array.from({ length: newCount - existingCount }).map(() => ({
+        user_id: userId,
+        library_id: libraryItem!.id,
+        media_id: mediaId,
+        media_type: "tv",
+        action: "completed",
+        previous_progress: libraryItem!.progress || 0,
+        new_progress: libraryItem!.progress || 0,
+        title: libraryItem!.title,
+        poster_path: libraryItem!.poster_path,
+        season_number: season,
+        episode_number: episode,
+        episode_name: name,
+        still_path: stillPath,
+        air_date: airDate,
+        watch_date: new Date().toISOString(),
+        runtime_minutes: runtime || 0,
+      }))
+      const { error: insErr } = await supabase.from("watch_history").insert(inserts)
+      if (insErr) throw insErr
+    } else if (existingCount > newCount) {
+      const toDeleteIds = historyList!.slice(0, existingCount - newCount).map((h) => h.id)
+      if (toDeleteIds.length > 0) {
+        const { error: delErr } = await supabase
+          .from("watch_history")
+          .delete()
+          .in("id", toDeleteIds)
+        if (delErr) throw delErr
+      }
+    }
+
+    // 5. Recalculate show completion progress
+    const { data: epList } = await supabase
+      .from("episode_progress")
+      .select("episode_number")
+      .eq("user_id", userId)
+      .eq("media_id", mediaId)
+      .eq("watch_status", "completed")
+
+    const watchedEpisodesCount = epList?.length || 0
+    let newProgress =
+      totalShowEpisodes > 0 ? Math.round((watchedEpisodesCount / totalShowEpisodes) * 100) : 0
+    newProgress = Math.max(0, Math.min(100, newProgress))
+
+    let newStatus: string
+    const isCompleting = newProgress === 100 && libraryItem.status !== "completed"
+    if (newProgress === 100) {
+      newStatus = "completed"
+    } else if (newProgress > 0) {
+      newStatus = "watching"
+    } else {
+      newStatus = libraryItem.status === "watching" ? "planning" : libraryItem.status
+    }
+
+    const { error: libError } = await supabase
+      .from("library")
+      .update({
+        progress: newProgress,
+        status: newStatus,
+        last_watched_at: newProgress > 0 ? new Date().toISOString() : null,
+        updated_progress_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        current_season: newCount > 0 ? season : libraryItem.current_season,
+        current_episode: newCount > 0 ? episode : libraryItem.current_episode,
+        last_episode_name: newCount > 0 ? name : libraryItem.last_episode_name,
+        completed_at: isCompleting
+          ? new Date().toISOString()
+          : newProgress === 0
+            ? null
+            : libraryItem.completed_at,
+        times_watched: isCompleting
+          ? (libraryItem.times_watched || 0) + 1
+          : newProgress === 0
+            ? 0
+            : libraryItem.times_watched,
+      })
+      .eq("id", libraryItem.id)
+
+    if (libError) throw libError
+  },
+
   async markEpisodeWatched(
     userId: string,
     mediaId: number,
@@ -266,37 +494,30 @@ export const TrackingService = {
     poster: string | null,
     expectedUpdatedAt: string | null
   ): Promise<void> {
-    // Perform optimistic concurrency check
-    const { data: libraryItem } = await supabase
-      .from("library")
-      .select("updated_at")
+    const { data: epRow } = await supabase
+      .from("episode_progress")
+      .select("watch_count")
       .eq("user_id", userId)
-      .eq("media_id", String(mediaId))
-      .eq("media_type", "tv")
+      .eq("media_id", mediaId)
+      .eq("season_number", season)
+      .eq("episode_number", episode)
       .maybeSingle()
 
-    if (libraryItem && expectedUpdatedAt && libraryItem.updated_at) {
-      if (
-        Math.abs(
-          new Date(libraryItem.updated_at).getTime() - new Date(expectedUpdatedAt).getTime()
-        ) > 1000
-      ) {
-        throw new Error("CONCURRENCY_ERROR: The TV progress was updated elsewhere. Please refresh.")
-      }
-    }
-
-    return this.recordEpisodeWatch(
+    const currentCount = epRow ? epRow.watch_count || 1 : 0
+    return this.updateEpisodeWatchCount(
       userId,
       mediaId,
       season,
       episode,
+      currentCount + 1,
       name,
       stillPath,
       airDate,
       runtime,
       totalShowEpisodes,
       title,
-      poster
+      poster,
+      expectedUpdatedAt
     )
   },
 
@@ -310,91 +531,25 @@ export const TrackingService = {
     airDate: string | null,
     runtime: number | null,
     totalShowEpisodes: number,
-    _title: string,
-    _poster: string | null,
+    title: string,
+    poster: string | null,
     expectedUpdatedAt: string | null
   ): Promise<void> {
-    const { data: libraryItem } = await supabase
-      .from("library")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("media_id", String(mediaId))
-      .eq("media_type", "tv")
-      .maybeSingle()
-
-    if (libraryItem && expectedUpdatedAt && libraryItem.updated_at) {
-      if (
-        Math.abs(
-          new Date(libraryItem.updated_at).getTime() - new Date(expectedUpdatedAt).getTime()
-        ) > 1000
-      ) {
-        throw new Error("CONCURRENCY_ERROR: The TV progress was updated elsewhere. Please refresh.")
-      }
-    }
-
-    if (!libraryItem) return
-
-    // Update episode progress to unwatched
-    const { error: epError } = await supabase
-      .from("episode_progress")
-      .update({
-        watch_status: "unwatched",
-        watch_count: 0,
-        watched_at: null,
-        last_watched_at: null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId)
-      .eq("media_id", mediaId)
-      .eq("season_number", season)
-      .eq("episode_number", episode)
-
-    if (epError) throw epError
-
-    // Recalculate progress
-    const { data: epList } = await supabase
-      .from("episode_progress")
-      .select("episode_number")
-      .eq("user_id", userId)
-      .eq("media_id", mediaId)
-      .eq("watch_status", "completed")
-
-    const watchedCount = epList?.length || 0
-    let newProgress =
-      totalShowEpisodes > 0 ? Math.round((watchedCount / totalShowEpisodes) * 100) : 0
-    newProgress = Math.max(0, Math.min(100, newProgress))
-
-    // Update library
-    const { error: libError } = await supabase
-      .from("library")
-      .update({
-        progress: newProgress,
-        status: newProgress === 100 ? "completed" : "watching",
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", libraryItem.id)
-
-    if (libError) throw libError
-
-    // Log to watch history
-    await supabase.from("watch_history").insert({
-      user_id: userId,
-      library_id: libraryItem.id,
-      media_id: mediaId,
-      media_type: "tv",
-      action: "completed",
-      previous_progress: libraryItem.progress || 0,
-      new_progress: newProgress,
-      title: libraryItem.title,
-      poster_path: libraryItem.poster_path,
-      watch_date: new Date().toISOString(),
-      runtime_minutes: runtime || 0,
-      season_number: season,
-      episode_number: episode,
-      episode_name: name,
-      still_path: stillPath,
-      air_date: airDate,
-    })
+    return this.updateEpisodeWatchCount(
+      userId,
+      mediaId,
+      season,
+      episode,
+      0,
+      name,
+      stillPath,
+      airDate,
+      runtime,
+      totalShowEpisodes,
+      title,
+      poster,
+      expectedUpdatedAt
+    )
   },
 
   async markSeasonCompleted(

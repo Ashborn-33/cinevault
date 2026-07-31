@@ -460,7 +460,26 @@ export function useMarkEpisode() {
       poster: string | null
       watched: boolean
       expectedUpdatedAt: string | null
+      watchCount?: number
     }) => {
+      if (variables.watchCount !== undefined) {
+        return TrackingService.updateEpisodeWatchCount(
+          userId,
+          variables.mediaId,
+          variables.season,
+          variables.episode,
+          variables.watchCount,
+          variables.name,
+          variables.stillPath,
+          variables.airDate,
+          variables.runtime,
+          variables.totalShowEpisodes,
+          variables.title,
+          variables.poster,
+          variables.expectedUpdatedAt
+        )
+      }
+
       if (variables.watched) {
         return TrackingService.markEpisodeWatched(
           userId,

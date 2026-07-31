@@ -61,14 +61,23 @@ export const WrappedService = {
       const moviesCompleted = libFiltered.filter(
         (i) => i.media_type === "movie" && i.status === "completed"
       )
-      const moviesCount = moviesCompleted.length
-      const episodesCount = epFiltered.length
-
-      const movieMinutes = moviesCompleted.reduce(
-        (sum, item) => sum + (item.runtime_minutes || 0),
+      const moviesCount = moviesCompleted.reduce(
+        (sum, item) => sum + (item.times_watched || 1),
         0
       )
-      const tvMinutes = epFiltered.reduce((sum, item) => sum + (item.runtime_minutes || 0), 0)
+      const episodesCount = epFiltered.reduce(
+        (sum, item) => sum + (item.watch_count || 1),
+        0
+      )
+
+      const movieMinutes = moviesCompleted.reduce(
+        (sum, item) => sum + (item.runtime_minutes || 0) * (item.times_watched || 1),
+        0
+      )
+      const tvMinutes = epFiltered.reduce(
+        (sum, item) => sum + (item.runtime_minutes || 0) * (item.watch_count || 1),
+        0
+      )
       const hoursCount = Math.round((movieMinutes + tvMinutes) / 60)
 
       // 6. Compute Favorite Genres

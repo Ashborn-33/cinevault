@@ -22,14 +22,14 @@ import { Button } from "@/components/ui/button"
 import { useContinueWatching } from "../hooks/useDashboard"
 import { DashboardHeader } from "../components/DashboardHeader"
 import { ContinueWatchingSection } from "../components/ContinueWatchingSection"
+import { HomeTabs } from "../components/HomeTabs"
+import { AbandonedWatchingSection } from "../components/AbandonedWatchingSection"
 import { useRawStatistics, useAchievements } from "@/features/statistics/hooks/useStatistics"
 import { StatisticsService } from "@/features/statistics/services/statistics.service"
 import { ReleaseService } from "@/features/releases/services/release.service"
-import { RecommendationService } from "@/features/recommendations/services/recommendation.service"
 import { useTimeline } from "@/features/activity/hooks/useActivity"
 import { tmdbClient } from "@/features/discover"
 import ReleaseCard from "@/features/releases/components/ReleaseCard"
-import RecommendationCarousel from "@/features/recommendations/components/RecommendationCarousel"
 import TimelineCard from "@/features/activity/components/TimelineCard"
 
 export function Dashboard() {
@@ -37,9 +37,16 @@ export function Dashboard() {
   const userId = user?.id || ""
   const navigate = useNavigate()
 
-  const [activeTab, setActiveTab] = React.useState<"now-watching" | "upcoming" | "recommended">(
-    "now-watching"
-  )
+  const [activeTab, setActiveTabState] = React.useState<"now-watching" | "upcoming">(() => {
+    const persisted = sessionStorage.getItem("cinevault_home_active_tab")
+    if (persisted === "upcoming") return "upcoming"
+    return "now-watching"
+  })
+
+  const setActiveTab = (tab: "now-watching" | "upcoming") => {
+    setActiveTabState(tab)
+    sessionStorage.setItem("cinevault_home_active_tab", tab)
+  }
 
   // 1. Fetch library items & raw statistics (reused React Query cache)
   const {
@@ -51,12 +58,51 @@ export function Dashboard() {
     refetch: refetchStats,
   } = useRawStatistics()
 
-  // 2. Fetch Continue Watching items
+  console.log("[STAGE 4 DEBUG] Dashboard component: episodeProgress.length =", episodeProgress?.length, "SUM(watch_count) =", episodeProgress?.reduce((sum, ep) => sum + (ep.watch_count || 1), 0))
+
   const {
     data: continueWatching = [],
     isLoading: isContinueLoading,
     refetch: refetchContinue,
   } = useContinueWatching()
+
+  // Filter for Continue Watching (<= 10 days since last activity) and Abandoned (> 10 days since last activity)
+  const { activeContinueWatching, abandonedWatching } = React.useMemo(() => {
+    const active: typeof continueWatching = []
+    const abandoned: typeof continueWatching = []
+    const thresholdDays = 10
+    const now = new Date()
+
+    continueWatching.forEach((item) => {
+      const lastWatched = item.last_watched_at
+        ? new Date(item.last_watched_at)
+        : new Date(item.updated_at || item.created_at || now)
+      const diffTime = now.getTime() - lastWatched.getTime()
+      const diffDays = diffTime / (1000 * 60 * 60 * 24)
+
+      if (diffDays <= thresholdDays) {
+        active.push(item)
+      } else {
+        abandoned.push(item)
+      }
+    })
+
+    // Sort active by last_activity DESC
+    active.sort((a, b) => {
+      const timeA = a.last_watched_at ? new Date(a.last_watched_at).getTime() : 0
+      const timeB = b.last_watched_at ? new Date(b.last_watched_at).getTime() : 0
+      return timeB - timeA
+    })
+
+    // Sort abandoned by last_activity ASC (oldest first)
+    abandoned.sort((a, b) => {
+      const timeA = a.last_watched_at ? new Date(a.last_watched_at).getTime() : 0
+      const timeB = b.last_watched_at ? new Date(b.last_watched_at).getTime() : 0
+      return timeA - timeB
+    })
+
+    return { activeContinueWatching: active, abandonedWatching: abandoned }
+  }, [continueWatching])
 
   // 3. Fetch Release Timeline for upcoming episodes/movies (also used for next episode countdown)
   const {
@@ -67,35 +113,6 @@ export function Dashboard() {
     queryKey: ["releases", "timeline", userId],
     queryFn: () => ReleaseService.getReleaseTimeline(userId),
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000,
-  })
-
-  // 4. Lazy-fetch recommendations only when the For You tab is active
-  const { data: trending = [] } = useQuery({
-    queryKey: ["recommendations", "trending", userId],
-    queryFn: () => RecommendationService.getTrendingForYou(userId),
-    enabled: activeTab === "recommended" && !!userId,
-    staleTime: 10 * 60 * 1000,
-  })
-
-  const { data: becauseYouWatched = [] } = useQuery({
-    queryKey: ["recommendations", "because-watched", userId],
-    queryFn: () => RecommendationService.getBecauseYouWatched(userId),
-    enabled: activeTab === "recommended" && !!userId,
-    staleTime: 10 * 60 * 1000,
-  })
-
-  const { data: hiddenGems = [] } = useQuery({
-    queryKey: ["recommendations", "hidden-gems", userId],
-    queryFn: () => RecommendationService.getHiddenGems(userId),
-    enabled: activeTab === "recommended" && !!userId,
-    staleTime: 10 * 60 * 1000,
-  })
-
-  const { data: continueSuggestions = [] } = useQuery({
-    queryKey: ["recommendations", "continue-suggestions", userId],
-    queryFn: () => RecommendationService.getContinueSuggestions(userId),
-    enabled: activeTab === "recommended" && !!userId,
     staleTime: 5 * 60 * 1000,
   })
 
@@ -123,6 +140,7 @@ export function Dashboard() {
       watchHistory,
       episodeProgress
     )
+    console.log("[STAGE 5 DEBUG] Quick Stats: moviesCount =", overview.movies, "tvShowsCount =", overview.tvShows, "episodesCount =", overview.episodes, "watchHours =", overview.watchHours)
     return {
       moviesCount: overview.movies,
       tvShowsCount: overview.tvShows,
@@ -229,55 +247,37 @@ export function Dashboard() {
         /* 3. Main Dashboard grid columns layout */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
           {/* Main left column layout */}
-          <div className="lg:col-span-2 space-y-10">
-            {/* Static Continue Watching Section (Always visible) */}
-            <ContinueWatchingSection items={continueWatching} />
+          <div className="lg:col-span-2 space-y-8">
+            {/* Reusable HomeTabs component placed directly below header, above Continue Watching */}
+            <HomeTabs activeTab={activeTab} onChange={setActiveTab} />
 
-            {/* Home Tab controls */}
-            <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-border/40 pb-2">
-                <div className="flex items-center gap-2 sm:gap-4 select-none">
-                  {(["now-watching", "upcoming", "recommended"] as const).map((tab) => {
-                    const label =
-                      tab === "now-watching"
-                        ? "Now Watching"
-                        : tab === "upcoming"
-                          ? "Upcoming"
-                          : "For You"
-                    const isActive = activeTab === tab
-                    return (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveTab(tab)}
-                        className={`relative pb-2.5 text-xs font-black tracking-wider uppercase cursor-pointer outline-none transition-colors ${
-                          isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        {label}
-                        {isActive && (
-                          <motion.span
-                            layoutId="activeHomeTabBorder"
-                            className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-full"
-                          />
-                        )}
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
+            {/* Tab views using Framer Motion wrapper */}
+            <div className="min-h-[200px]">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-8"
+                >
+                  {/* TAB A: Now Watching */}
+                  {activeTab === "now-watching" && (
+                    <div className="space-y-8">
+                      {/* Continue Watching Section (only visible on Now Watching tab) */}
+                      {activeContinueWatching.length > 0 ? (
+                        <ContinueWatchingSection items={activeContinueWatching} />
+                      ) : (
+                        activeContinueWatching.length === 0 &&
+                        abandonedWatching.length === 0 && <ContinueWatchingSection items={[]} />
+                      )}
 
-              {/* Tab views using Framer Motion wrapper */}
-              <div className="min-h-[200px]">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeTab}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {/* TAB A: Now Watching */}
-                    {activeTab === "now-watching" && (
+                      {/* Haven't Watched for a While Section */}
+                      {abandonedWatching.length > 0 && (
+                        <AbandonedWatchingSection items={abandonedWatching} />
+                      )}
+
                       <div className="space-y-8 font-sans">
                         {/* Currently Watching items */}
                         <div className="space-y-3">
@@ -400,6 +400,11 @@ export function Dashboard() {
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                               {libraryItems
                                 .filter((i) => i.status === "completed")
+                                .sort(
+                                  (a, b) =>
+                                    new Date(b.completed_at || 0).getTime() -
+                                    new Date(a.completed_at || 0).getTime()
+                                )
                                 .slice(0, 4)
                                 .map((item) => {
                                   const posterUrl = item.poster_path
@@ -444,131 +449,173 @@ export function Dashboard() {
                             </p>
                           )}
                         </div>
-                      </div>
-                    )}
 
-                    {/* TAB B: Upcoming Releases calendar */}
-                    {activeTab === "upcoming" && (
-                      <div className="space-y-6 font-sans">
-                        <div className="flex justify-between items-center">
+                        {/* Haven't Started Yet items */}
+                        <div className="space-y-3">
                           <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                            Upcoming Releases
+                            Haven't Started Yet
                           </h3>
-                          <Link
-                            to="/releases"
-                            className="text-[10px] text-primary font-bold hover:underline"
-                          >
-                            View Full Calendar &rarr;
-                          </Link>
+                          {libraryItems.filter(
+                            (i) => i.watchlist && (!i.progress || i.progress === 0)
+                          ).length > 0 ? (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                              {libraryItems
+                                .filter((i) => i.watchlist && (!i.progress || i.progress === 0))
+                                .sort(
+                                  (a, b) =>
+                                    new Date(b.created_at || 0).getTime() -
+                                    new Date(a.created_at || 0).getTime()
+                                )
+                                .slice(0, 4)
+                                .map((item) => {
+                                  const posterUrl = item.poster_path
+                                    ? tmdbClient.getImageUrl(item.poster_path)
+                                    : null
+                                  return (
+                                    <div
+                                      key={item.id}
+                                      onClick={() =>
+                                        navigate(`/${item.media_type}/${item.media_id}`)
+                                      }
+                                      className="flex flex-col border border-border/55 bg-surface/30 rounded-card overflow-hidden hover:border-primary/50 cursor-pointer group shadow-sm transition-all"
+                                    >
+                                      <div className="aspect-[2/3] bg-zinc-900 overflow-hidden relative">
+                                        {posterUrl ? (
+                                          <img
+                                            src={posterUrl}
+                                            alt={item.title}
+                                            className="h-full w-full object-cover group-hover:scale-105 transition-transform"
+                                          />
+                                        ) : (
+                                          <div className="h-full w-full flex items-center justify-center text-[10px] text-muted-foreground p-3 text-center">
+                                            {item.title}
+                                          </div>
+                                        )}
+                                      </div>
+                                      <div className="p-2 space-y-0.5">
+                                        <h4 className="text-[10px] font-bold truncate group-hover:text-primary transition-colors">
+                                          {item.title}
+                                        </h4>
+                                        <p className="text-[8px] text-muted-foreground uppercase font-semibold">
+                                          {item.media_type === "movie" ? "Movie" : "TV Show"}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground font-semibold italic bg-zinc-950/20 p-4 border border-border/40 rounded-button">
+                              No items in your watchlist that haven't been started. Add some from
+                              Discover!
+                            </p>
+                          )}
                         </div>
-                        {timeline &&
-                        (timeline.today.length > 0 ||
-                          timeline.tomorrow.length > 0 ||
-                          timeline.thisWeek.length > 0) ? (
-                          <div className="space-y-6">
-                            {/* Today Group */}
-                            {timeline.today.length > 0 && (
-                              <div className="space-y-3">
-                                <h4 className="text-xs font-black text-primary uppercase tracking-wider pl-1">
-                                  Today
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {timeline.today.map((event) => (
-                                    <ReleaseCard key={event.id} event={event} />
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Tomorrow Group */}
-                            {timeline.tomorrow.length > 0 && (
-                              <div className="space-y-3">
-                                <h4 className="text-xs font-black text-accent uppercase tracking-wider pl-1">
-                                  Tomorrow
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {timeline.tomorrow.map((event) => (
-                                    <ReleaseCard key={event.id} event={event} />
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-
-                            {/* This Week Group */}
-                            {timeline.thisWeek.length > 0 && (
-                              <div className="space-y-3">
-                                <h4 className="text-xs font-black text-muted-foreground uppercase tracking-wider pl-1">
-                                  This Week
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                  {timeline.thisWeek.map((event) => (
-                                    <ReleaseCard key={event.id} event={event} />
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground font-semibold italic bg-zinc-950/20 p-6 border border-border/40 rounded-button text-center">
-                            No upcoming releases on your calendar. Add ongoing TV shows to trigger
-                            dates!
-                          </p>
-                        )}
                       </div>
-                    )}
+                    </div>
+                  )}
 
-                    {/* TAB C: Recommended lists */}
-                    {activeTab === "recommended" && (
-                      <div className="space-y-8 font-sans">
-                        <div className="flex justify-between items-center">
-                          <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
-                            For You
-                          </h3>
-                          <Link
-                            to="/recommendations"
-                            className="text-[10px] text-primary font-bold hover:underline"
-                          >
-                            View All Intelligence &rarr;
-                          </Link>
-                        </div>
+                  {/* TAB B: Upcoming Releases calendar */}
+                  {activeTab === "upcoming" && (
+                    <div className="space-y-6 font-sans">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-xs font-black uppercase tracking-wider text-muted-foreground">
+                          Upcoming Releases
+                        </h3>
+                        <Link
+                          to="/releases"
+                          className="text-[10px] text-primary font-bold hover:underline"
+                        >
+                          View Full Calendar &rarr;
+                        </Link>
+                      </div>
+                      {timeline &&
+                      (timeline.today.length > 0 ||
+                        timeline.tomorrow.length > 0 ||
+                        timeline.thisWeek.length > 0 ||
+                        timeline.nextWeek.length > 0 ||
+                        timeline.later.length > 0) ? (
                         <div className="space-y-6">
-                          {continueSuggestions.length > 0 && (
-                            <RecommendationCarousel
-                              title="Resume watching or Similar Shows"
-                              subtitle="TV shows from your watching list or items closely related to TV titles you completed."
-                              items={continueSuggestions}
-                            />
+                          {/* Today Group */}
+                          {timeline.today.length > 0 && (
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-black text-primary uppercase tracking-wider pl-1">
+                                Today
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {timeline.today.map((event) => (
+                                  <ReleaseCard key={event.id} event={event} />
+                                ))}
+                              </div>
+                            </div>
                           )}
 
-                          {becauseYouWatched.length > 0 && (
-                            <RecommendationCarousel
-                              title="Because You Watched"
-                              subtitle="Suggestions matching theme elements of your recently completed library movies and shows."
-                              items={becauseYouWatched}
-                            />
+                          {/* Tomorrow Group */}
+                          {timeline.tomorrow.length > 0 && (
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-black text-accent uppercase tracking-wider pl-1">
+                                Tomorrow
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {timeline.tomorrow.map((event) => (
+                                  <ReleaseCard key={event.id} event={event} />
+                                ))}
+                              </div>
+                            </div>
                           )}
 
-                          {trending.length > 0 && (
-                            <RecommendationCarousel
-                              title="Trending Matches For You"
-                              subtitle="High rating movies and TV series trending in CineVault matching your metadata preferences."
-                              items={trending}
-                            />
+                          {/* This Week Group */}
+                          {timeline.thisWeek.length > 0 && (
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-black text-muted-foreground uppercase tracking-wider pl-1">
+                                This Week
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {timeline.thisWeek.map((event) => (
+                                  <ReleaseCard key={event.id} event={event} />
+                                ))}
+                              </div>
+                            </div>
                           )}
 
-                          {hiddenGems.length > 0 && (
-                            <RecommendationCarousel
-                              title="Hidden Gems & Discoveries"
-                              subtitle="Highly-rated titles with lower global vote tallies you might have overlooked."
-                              items={hiddenGems}
-                            />
+                          {/* Next Week Group */}
+                          {timeline.nextWeek.length > 0 && (
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-black text-muted-foreground uppercase tracking-wider pl-1">
+                                Next Week
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {timeline.nextWeek.map((event) => (
+                                  <ReleaseCard key={event.id} event={event} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Later Group */}
+                          {timeline.later.length > 0 && (
+                            <div className="space-y-3">
+                              <h4 className="text-xs font-black text-muted-foreground uppercase tracking-wider pl-1">
+                                Airing Soon / Later
+                              </h4>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {timeline.later.map((event) => (
+                                  <ReleaseCard key={event.id} event={event} />
+                                ))}
+                              </div>
+                            </div>
                           )}
                         </div>
-                      </div>
-                    )}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+                      ) : (
+                        <p className="text-xs text-muted-foreground font-semibold italic bg-zinc-950/20 p-6 border border-border/40 rounded-button text-center">
+                          No upcoming releases on your calendar. Add ongoing TV shows to trigger
+                          dates!
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
             </div>
           </div>
 

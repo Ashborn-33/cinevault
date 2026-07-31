@@ -141,7 +141,7 @@ export const ProfileService = {
       ).length
 
       // 3. Count episodes watched
-      const episodesCompleted = episodeProgress.length
+      const episodesCompleted = episodeProgress.reduce((sum, ep) => sum + (ep.watch_count || 1), 0)
 
       // 4. Count collections created
       const collectionsCount = collections.length

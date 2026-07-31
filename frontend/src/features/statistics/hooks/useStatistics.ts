@@ -8,7 +8,7 @@ export function useRawStatistics() {
   const userId = user?.id || ""
 
   const libraryQuery = useQuery({
-    queryKey: ["library", "list", userId],
+    queryKey: ["statistics", "libraryItemsAll", userId],
     queryFn: () => StatisticsService.getLibraryItems(userId),
     enabled: !!userId,
     staleTime: 30 * 1000,
@@ -23,7 +23,12 @@ export function useRawStatistics() {
 
   const episodesQuery = useQuery({
     queryKey: ["tracking", "episodeProgressAll", userId],
-    queryFn: () => StatisticsService.getEpisodeProgress(userId),
+    queryFn: async () => {
+      const data = await StatisticsService.getEpisodeProgress(userId)
+      const sumWatchCount = data.reduce((sum, ep) => sum + (ep.watch_count || 1), 0)
+      console.log("[STAGE 3 DEBUG] React Query caching: size =", data.length, "SUM(watch_count) =", sumWatchCount)
+      return data
+    },
     enabled: !!userId,
     staleTime: 30 * 1000,
   })

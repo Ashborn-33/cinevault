@@ -6,92 +6,16 @@ import type { UpcomingEpisodeEntry, UpcomingEpisodesGrouped } from "../types/das
 export const DashboardService = {
   // getContinueWatching: Fetches active in-progress titles with smart filtering
   async getContinueWatching(userId: string): Promise<LibraryItem[]> {
-    // 1. Fetch items that are potentially in progress from library
     const { data: libraryItems, error } = await supabase
       .from("library")
       .select("*")
       .eq("user_id", userId)
-      .or("status.eq.watching,status.eq.rewatching,progress.gt.0")
-      .neq("status", "completed")
-      .neq("status", "dropped")
-      .neq("status", "planning")
-      .neq("status", "on_hold")
+      .gt("progress", 0)
+      .lt("progress", 100)
+      .order("last_watched_at", { ascending: false })
 
     if (error) throw error
-    const items = (libraryItems || []) as LibraryItem[]
-
-    // 60-day boundary calculation
-    const sixtyDaysAgo = new Date()
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
-    const sixtyDaysAgoTime = sixtyDaysAgo.getTime()
-
-    const activeItems: LibraryItem[] = []
-    const inactiveItems: LibraryItem[] = []
-
-    items.forEach((item) => {
-      // Exclude titles with 100% progress
-      if (item.progress === 100) return
-
-      // Exclude Wishlist-only / Favorite-only without progress
-      const isWishlistOnly =
-        item.watchlist &&
-        (!item.progress || item.progress === 0) &&
-        item.status !== "watching" &&
-        item.status !== "rewatching"
-      const isFavoriteOnly =
-        item.favorite &&
-        (!item.progress || item.progress === 0) &&
-        item.status !== "watching" &&
-        item.status !== "rewatching"
-      if (isWishlistOnly || isFavoriteOnly) return
-
-      // Activity inside 60 days check
-      const lastWatchedTime = item.last_watched_at ? new Date(item.last_watched_at).getTime() : 0
-      const hasActivityIn60Days = lastWatchedTime >= sixtyDaysAgoTime
-
-      // Started tracking exists and progress > 0
-      const hasProgressAndStarted =
-        !!item.started_at &&
-        item.progress !== null &&
-        item.progress !== undefined &&
-        item.progress > 0
-
-      if (hasActivityIn60Days || hasProgressAndStarted) {
-        activeItems.push(item)
-      } else if (item.last_watched_at) {
-        inactiveItems.push(item)
-      }
-    })
-
-    // Multi-key sorting function
-    const sortItems = (a: LibraryItem, b: LibraryItem) => {
-      const timeA = a.last_watched_at ? new Date(a.last_watched_at).getTime() : 0
-      const timeB = b.last_watched_at ? new Date(b.last_watched_at).getTime() : 0
-      if (timeB !== timeA) return timeB - timeA
-
-      const progA = a.updated_progress_at ? new Date(a.updated_progress_at).getTime() : 0
-      const progB = b.updated_progress_at ? new Date(b.updated_progress_at).getTime() : 0
-      if (progB !== progA) return progB - progA
-
-      const startA = a.started_at ? new Date(a.started_at).getTime() : 0
-      const startB = b.started_at ? new Date(b.started_at).getTime() : 0
-      return startB - startA
-    }
-
-    activeItems.sort(sortItems)
-    inactiveItems.sort(sortItems)
-
-    let result = [...activeItems]
-
-    // Fallback: If fewer than 5 active items, fill remaining slots with inactive items (recently watched)
-    if (result.length < 5) {
-      const needed = 5 - result.length
-      const fallback = inactiveItems.slice(0, needed)
-      result = [...result, ...fallback]
-      result.sort(sortItems)
-    }
-
-    return result.slice(0, 10)
+    return (libraryItems || []) as LibraryItem[]
   },
 
   // getUpcomingEpisodes: Fetches next airing episodes for user's library TV shows

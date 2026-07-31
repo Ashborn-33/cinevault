@@ -24,10 +24,31 @@ export const StatisticsService = {
   // Raw Data Fetchers
   async getLibraryItems(userId: string): Promise<LibraryItem[]> {
     try {
-      const { data, error } = await supabase.from("library").select("*").eq("user_id", userId)
-      if (error) throw error
-      localStorage.setItem(`cinevault_lib_items_${userId}`, JSON.stringify(data))
-      return data as LibraryItem[]
+      let allData: LibraryItem[] = []
+      let from = 0
+      const limit = 1000
+      let hasMore = true
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("library")
+          .select("*")
+          .eq("user_id", userId)
+          .range(from, from + limit - 1)
+        if (error) throw error
+        if (!data || data.length === 0) {
+          hasMore = false
+        } else {
+          allData = [...allData, ...data]
+          from += limit
+          if (data.length < limit) {
+            hasMore = false
+          }
+        }
+      }
+
+      localStorage.setItem(`cinevault_lib_items_${userId}`, JSON.stringify(allData))
+      return allData as LibraryItem[]
     } catch (err) {
       console.warn("Offline fallback for getLibraryItems:", err)
       const cached = localStorage.getItem(`cinevault_lib_items_${userId}`)
@@ -38,14 +59,32 @@ export const StatisticsService = {
 
   async getWatchHistory(userId: string): Promise<WatchHistoryEntry[]> {
     try {
-      const { data, error } = await supabase
-        .from("watch_history")
-        .select("*")
-        .eq("user_id", userId)
-        .order("watch_date", { ascending: true })
-      if (error) throw error
-      localStorage.setItem(`cinevault_watch_history_${userId}`, JSON.stringify(data))
-      return data as WatchHistoryEntry[]
+      let allData: WatchHistoryEntry[] = []
+      let from = 0
+      const limit = 1000
+      let hasMore = true
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("watch_history")
+          .select("*")
+          .eq("user_id", userId)
+          .order("watch_date", { ascending: true })
+          .range(from, from + limit - 1)
+        if (error) throw error
+        if (!data || data.length === 0) {
+          hasMore = false
+        } else {
+          allData = [...allData, ...data]
+          from += limit
+          if (data.length < limit) {
+            hasMore = false
+          }
+        }
+      }
+
+      localStorage.setItem(`cinevault_watch_history_${userId}`, JSON.stringify(allData))
+      return allData as WatchHistoryEntry[]
     } catch (err) {
       console.warn("Offline fallback for getWatchHistory:", err)
       const cached = localStorage.getItem(`cinevault_watch_history_${userId}`)
@@ -56,14 +95,35 @@ export const StatisticsService = {
 
   async getEpisodeProgress(userId: string): Promise<EpisodeProgress[]> {
     try {
-      const { data, error } = await supabase
-        .from("episode_progress")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("watch_status", "completed")
-      if (error) throw error
-      localStorage.setItem(`cinevault_episode_progress_${userId}`, JSON.stringify(data))
-      return data as EpisodeProgress[]
+      let allData: EpisodeProgress[] = []
+      let from = 0
+      const limit = 1000
+      let hasMore = true
+
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("episode_progress")
+          .select("*")
+          .eq("user_id", userId)
+          .eq("watch_status", "completed")
+          .range(from, from + limit - 1)
+        if (error) throw error
+        if (!data || data.length === 0) {
+          hasMore = false
+        } else {
+          allData = [...allData, ...data]
+          from += limit
+          if (data.length < limit) {
+            hasMore = false
+          }
+        }
+      }
+
+      const sumWatchCount = allData.reduce((sum, ep) => sum + (ep.watch_count || 1), 0)
+      console.log("[STAGE 1 DEBUG] getEpisodeProgress: rows returned =", allData.length, "SUM(watch_count) =", sumWatchCount)
+
+      localStorage.setItem(`cinevault_episode_progress_${userId}`, JSON.stringify(allData))
+      return allData as EpisodeProgress[]
     } catch (err) {
       console.warn("Offline fallback for getEpisodeProgress:", err)
       const cached = localStorage.getItem(`cinevault_episode_progress_${userId}`)
@@ -214,10 +274,11 @@ export const StatisticsService = {
     let tvMinutes = 0
     episodeProgress.forEach((ep) => {
       if (ep.watch_status === "completed") {
+        const count = ep.watch_count || 1
         if (ep.runtime_minutes && ep.runtime_minutes > 0) {
-          tvMinutes += ep.runtime_minutes
+          tvMinutes += ep.runtime_minutes * count
         } else {
-          tvMinutes += showRuntimeMap.get(String(ep.media_id)) || 0
+          tvMinutes += (showRuntimeMap.get(String(ep.media_id)) || 0) * count
         }
       }
     })
@@ -240,10 +301,7 @@ export const StatisticsService = {
     return { averageRating }
   },
 
-  calculateGenres(
-    libraryItems: LibraryItem[],
-    episodeProgress: EpisodeProgress[]
-  ) {
+  calculateGenres(libraryItems: LibraryItem[], episodeProgress: EpisodeProgress[]) {
     const genreMinutes: Record<string, number> = {}
 
     libraryItems.forEach((item) => {
@@ -270,6 +328,7 @@ export const StatisticsService = {
 
     episodeProgress.forEach((ep) => {
       if (ep.watch_status === "completed") {
+        const count = ep.watch_count || 1
         const runtime =
           ep.runtime_minutes && ep.runtime_minutes > 0
             ? ep.runtime_minutes
@@ -277,7 +336,7 @@ export const StatisticsService = {
 
         const genres = showGenresMap.get(String(ep.media_id)) || []
         genres.forEach((g) => {
-          genreMinutes[g] = (genreMinutes[g] || 0) + runtime
+          genreMinutes[g] = (genreMinutes[g] || 0) + runtime * count
         })
       }
     })
@@ -302,11 +361,15 @@ export const StatisticsService = {
     const ratingStats = this.calculateRatings(libraryItems)
     const genreStats = this.calculateGenres(libraryItems, episodeProgress)
 
-    return {
+    const totalEpisodesWatched = episodeProgress
+      .filter((ep) => ep.watch_status === "completed")
+      .reduce((sum, ep) => sum + (ep.watch_count || 1), 0)
+
+    const result = {
       // Legacy compatibility
       totalWatchTime: timeStats.watchMinutes,
       moviesCompleted: libStats.completedMovies,
-      episodesCompleted: episodeProgress.filter((ep) => ep.watch_status === "completed").length,
+      episodesCompleted: totalEpisodesWatched,
       tvShowsCompleted: libStats.completedShows,
       continueWatchingCount: libStats.continueWatching,
       currentStreak: streakStats.currentStreak,
@@ -316,7 +379,7 @@ export const StatisticsService = {
       // New properties
       movies: libStats.movies,
       tvShows: libStats.tvShows,
-      episodes: episodeProgress.filter((ep) => ep.watch_status === "completed").length,
+      episodes: totalEpisodesWatched,
       watchMinutes: timeStats.watchMinutes,
       watchHours: timeStats.watchHours,
       completedMovies: libStats.completedMovies,
@@ -331,6 +394,9 @@ export const StatisticsService = {
       lastActivity: streakStats.lastActivity,
       continueWatching: libStats.continueWatching,
     }
+
+    console.log("[STAGE 2 DEBUG] calculateOverview: episodesWatched =", result.episodes, "totalEpisodes =", result.episodes, "watchHours =", result.watchHours)
+    return result
   },
 
   calculateGenreStats(

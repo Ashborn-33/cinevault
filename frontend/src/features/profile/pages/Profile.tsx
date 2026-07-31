@@ -52,7 +52,7 @@ export function Profile() {
       ).length
 
       // Completed episodes
-      const episodesCompleted = ep.length
+      const episodesCompleted = ep.reduce((sum, item) => sum + (item.watch_count || 1), 0)
 
       // TV shows with at least one completed episode
       const tvShowsCompleted = new Set(ep.map((item) => item.media_id)).size
@@ -60,14 +60,16 @@ export function Profile() {
       // Hours watched
       const movieWatchTime = lib
         .filter((i) => i.media_type === "movie" && i.status === "completed")
-        .reduce((sum, item) => sum + (item.runtime_minutes || 0), 0)
+        .reduce((sum, item) => sum + (item.runtime_minutes || 0) * (item.times_watched || 1), 0)
 
-      const tvWatchTime = ep.reduce((sum, item) => sum + (item.runtime_minutes || 0), 0)
+      const tvWatchTime = ep.reduce((sum, item) => sum + (item.runtime_minutes || 0) * (item.watch_count || 1), 0)
 
       const hoursWatched = Math.round((movieWatchTime + tvWatchTime) / 60)
 
       const achievements = StatisticsService.calculateAchievements(lib, watch, ep)
       const achievementsCount = achievements.filter((a) => a.unlocked).length
+
+      console.log("[STAGE 6 DEBUG] Profile Page: episodesCompleted =", episodesCompleted, "tvShowsCompleted =", tvShowsCompleted, "hoursWatched =", hoursWatched)
 
       return {
         moviesCompleted,
